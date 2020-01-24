@@ -1,0 +1,13 @@
+certifi==2019.11.28
+mkl-fft==1.0.15
+mkl-random==1.1.0
+mkl-service==2.3.0
+numpy==1.17.3
+ortools==7.4.7247
+pandas==0.25.3
+pathlib==1.0.1
+protobuf==3.11.2
+python-dateutil==2.8.1
+pytz==2019.3
+six==1.13.0
+wincertstore==0.2
