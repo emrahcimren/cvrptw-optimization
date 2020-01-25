@@ -89,3 +89,4 @@ $b_{n+1} = \max_{i\in N} \{b_i + s_i+ t_{in+1}\}$
 $x_{ijk}$ = 1 if $(i,j)$ is covered by vehicle $k$; 0 otherwise
 
 $w_{ik}$ = Time when vehicle $k$ starts servicing at node $i\in N$
+

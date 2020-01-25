@@ -13,7 +13,7 @@ class Formulation:
 
     def __init__(self, K, V, N, t, q, s, locations, depot,
                  outgoing_arcs, incoming_arcs, depot_leave, depot_enter,
-                 a, b, maximum_vehicle_capacity, solver_time_limit_mins, maximum_stops_by_truck):
+                 a, b, M, maximum_vehicle_capacity, solver_time_limit_mins):
 
         self.solver = None
         self.infinity = None
@@ -30,11 +30,11 @@ class Formulation:
         self.depot_enter = depot_enter
         self.a = a
         self.b = b
+        self.M = M
         self.maximum_vehicle_capacity = maximum_vehicle_capacity
         self.solver_time_limit_mins = None
         self.depot_lat = depot['LATITUDE'].iloc[0]
         self.depot_lon = depot['LONGITUDE'].iloc[0]
-        self.maximum_stops_by_truck = maximum_stops_by_truck
         self.locations = locations
         self.depot = depot
         self.solver_time_limit_mins = solver_time_limit_mins
@@ -48,6 +48,14 @@ class Formulation:
         self.service_start_time = None
 
         self.final_model_solution = None
+
+    def initiate_solver(self):
+        '''
+        Function to initiate solver
+        :return:
+        '''
+        self.solver = pywraplp.Solver('SolveIntegerProblem', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+        self.infinity = self.solver.infinity()
 
     def create_model_formulation(self):
         '''
@@ -63,15 +71,6 @@ class Formulation:
         self._create_time_variable_constraint()
         self._create_time_windows_constraint()
         self._create_vehicle_capacity_constraint()
-
-
-    def initiate_solver(self):
-        '''
-        Function to initiate solver
-        :return:
-        '''
-        self.solver = pywraplp.Solver('SolveIntegerProblem', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
-        self.infinity = self.solver.infinity()
 
     def _create_allocation_variable(self):
         '''
@@ -135,7 +134,7 @@ class Formulation:
         for i, j in self.t.keys():
             for k in self.K:
                 self.solver.Add(
-                    self.w[j, k] - self.w[i, k] - self.s[i].STOP_TIME_WITHOUT_HELPER - self.t[i, j] +
+                    self.w[j, k] - self.w[i, k] - self.s[i] - self.t[i, j] +
                     self.M[i, j] - self.M[i, j] * self.x[i, j, k] >= 0)
 
     def _create_time_windows_constraint(self):
@@ -148,7 +147,7 @@ class Formulation:
                 self.solver.Add(self.w[i, k] >= self.a[i])
                 self.solver.Add(self.w[i, k] <= self.b[i])
 
-    def create_vehicle_capacity_constraint(self):
+    def _create_vehicle_capacity_constraint(self):
         '''
         Total volume in the vehicle can not exceed the total capacity
         :return:
