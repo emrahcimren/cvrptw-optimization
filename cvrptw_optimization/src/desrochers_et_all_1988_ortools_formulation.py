@@ -13,7 +13,8 @@ class Formulation:
 
     def __init__(self, K, V, N, t, q, s, locations, depot,
                  outgoing_arcs, incoming_arcs, depot_leave, depot_enter,
-                 a, b, M, maximum_vehicle_capacity, solver_time_limit_mins):
+                 a, b, M, Q, solver_time_limit_mins,
+                 maximum_travel_hours):
 
         self.solver = None
         self.infinity = None
@@ -24,6 +25,7 @@ class Formulation:
         self.t = t
         self.q = q
         self.s = s
+        self.Q = Q
         self.incoming_arcs = incoming_arcs
         self.outgoing_arcs = outgoing_arcs
         self.depot_leave = depot_leave
@@ -31,7 +33,9 @@ class Formulation:
         self.a = a
         self.b = b
         self.M = M
-        self.maximum_vehicle_capacity = maximum_vehicle_capacity
+
+        self.maximum_travel_hours = maximum_travel_hours
+
         self.solver_time_limit_mins = None
         self.depot_lat = depot['LATITUDE'].iloc[0]
         self.depot_lon = depot['LONGITUDE'].iloc[0]
@@ -64,6 +68,7 @@ class Formulation:
         '''
         self._create_allocation_variable()
         self._create_service_start_time_variable()
+        self._create_total_time_variable()
         self._create_customer_visit_constraint()
         self._create_vehicle_depot_leave_constraint()
         self._create_flow_in_flow_out_constraint()
@@ -71,6 +76,9 @@ class Formulation:
         self._create_time_variable_constraint()
         self._create_time_windows_constraint()
         self._create_vehicle_capacity_constraint()
+
+        if self.maximum_travel_hours is not None:
+            self._create_maximum_travel_time_constraint()
 
     def _create_allocation_variable(self):
         '''
@@ -91,6 +99,11 @@ class Formulation:
         for i in self.V:
             for k in self.K:
                 self.w[i, k] = self.solver.NumVar(0, self.infinity, 'w[{}, {}]'.format(str(i), str(k)))
+
+    def _create_total_time_variable(self):
+        self.z = {}
+        for k in self.K:
+            self.z[k] = self.solver.NumVar(0, self.infinity, 'z[{}]'.format(str(k)))
 
     def _create_customer_visit_constraint(self):
         '''
@@ -153,13 +166,34 @@ class Formulation:
         :return:
         '''
         for k in self.K:
-            stops_list = {}
-            self.solver.Add(self.solver.Sum([self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]]) <= self.maximum_vehicle_capacity)
+            self.solver.Add(
+                self.solver.Sum([self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]]) <= self.Q[k]
+            )
+
+    def _create_maximum_travel_time_constraint(self):
+        '''
+        Total travel time can not exceed total travel time
+        :return:
+        '''
+        for k in self.K:
+            for i in self.N:
+                self.solver.Add(
+                    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.z[k]
+                )
+                self.solver.Add(
+                    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.maximum_travel_hours*60
+                )
 
     def create_model_objective(self):
         # add objective
         self.solver.Minimize(self.solver.Sum(
             [self.t[i, j] * self.x[i, j, k] for k in self.K for i, j in self.t.keys()]))
+
+        #self.solver.Minimize(
+        #    self.solver.Sum(
+        #        [self.z[k] for k in self.K]
+        #    )
+        #)
 
     def run_model(self):
         # solver.Minimize(1)

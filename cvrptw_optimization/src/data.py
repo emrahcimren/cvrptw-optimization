@@ -4,7 +4,8 @@ Input data for modeling test
 import pandas as pd
 
 solver_time_limit_minutes = 2
-maximum_trucks = 1
+
+vehicles = {'Vehicle 1': {'TYPE': '48 FOOTER TRUCK', 'CAPACITY': 20}}
 
 depot = {'PS_NASHVILLE-DAVIDSON_TENNESSEE': {'LATITUDE': 36.16266, 'LONGITUDE': -86.7816}}
 
@@ -421,3 +422,6 @@ locations.rename(columns={'index': 'LOCATION_NAME'}, inplace=True)
 transportation_matrix = convert_dictionary_to_pandas(transportation_matrix)
 transportation_matrix.rename(columns={'level_0': 'FROM_LOCATION_NAME',
                                       'level_1': 'TO_LOCATION_NAME'}, inplace=True)
+
+vehicles = convert_dictionary_to_pandas(vehicles)
+vehicles.rename(columns={'index': 'VEHICLE_NAME'}, inplace=True)

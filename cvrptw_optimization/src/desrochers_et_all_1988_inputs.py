@@ -9,7 +9,7 @@ CVRPTW formulation by Desrochers et al 1988
 
 class ModelInputs:
 
-    def __init__(self, transportation_matrix, locations, depot, maximum_trucks):
+    def __init__(self, transportation_matrix, locations, depot, vehicles):
 
         self.transportation_matrix = transportation_matrix
         self.locations = locations
@@ -17,15 +17,16 @@ class ModelInputs:
         self.depot_name = depot['LOCATION_NAME'].iloc[0]
         self.depot_leave = '{}_START'.format(self.depot_name)
         self.depot_enter = '{}_END'.format(self.depot_name)
-        self.maximum_trucks = maximum_trucks
+        self.vehicles = vehicles
 
-        self.K = None #set pf vehicles
-        self.V = None #set pf vertices
+        self.K = None #set of vehicles
+        self.V = None #set of vertices
         self.N = None #set of nodes
 
         self.t = None #transit times
         self.s = None #stop times
         self.q = None #location demand
+        self.Q = None #truck capacity
 
         self.a = None #time window start
         self.b = None #time window end
@@ -52,7 +53,12 @@ class ModelInputs:
         Model set of vehicles
         :return:
         '''
-        self.K = list(range(0, self.maximum_trucks))
+
+        self.Q = {}
+        for row in self.vehicles.itertuples():
+            self.Q[row.VEHICLE_NAME] = row.CAPACITY
+
+        self.K = self.Q.keys()
 
     def create_set_of_vertices(self):
         '''

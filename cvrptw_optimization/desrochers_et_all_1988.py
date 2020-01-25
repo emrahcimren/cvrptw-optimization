@@ -6,7 +6,8 @@ CVRPTW formulation by Desrochers et al 1988
 '''
 
 import pandas as pd
-from cvrptw_optimization.src import data
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', None)
 from cvrptw_optimization.src import desrochers_et_all_1988_helpers as he
 from cvrptw_optimization.src import desrochers_et_all_1988_inputs as di
 
@@ -14,24 +15,21 @@ from cvrptw_optimization.src import desrochers_et_all_1988_inputs as di
 def run_desrochers_et_all_1988(depot,
                                locations,
                                transportation_matrix,
-                               maximum_trucks,
+                               vehicles,
+                               maximum_travel_hours,
+                               solver_time_limit_mins,
                                solver='ortools'):
     '''
     Run Desrochers model
     :param depot:
     :param locations:
     :param transportation_matrix:
-    :param maximum_trucks:
+    :param vehicles:
+    :param maximum_travel_hours:
+    :param solver_time_limit_mins:
     :param solver:
     :return:
     '''
-    transportation_matrix = data.transportation_matrix
-    locations = data.locations
-    depot = data.depot
-    maximum_trucks = 1
-    maximum_vehicle_capacity = 20
-    solver_time_limit_mins = 2
-    solver = 'or tools'
 
     locations_name_list = list(locations['LOCATION_NAME'].unique())
     depot_name_list = list(depot['LOCATION_NAME'].unique())
@@ -46,7 +44,7 @@ def run_desrochers_et_all_1988(depot,
     transportation_matrix = he.prepare_transportation_matrix(transportation_matrix, depot_name_list)
 
     # prepare model inputs
-    inputs = di.ModelInputs(transportation_matrix, locations, depot, maximum_trucks)
+    inputs = di.ModelInputs(transportation_matrix, locations, depot, vehicles)
 
     # create model formulation #
     if solver == 'or tools':
@@ -55,8 +53,9 @@ def run_desrochers_et_all_1988(depot,
 
         model = orf.Formulation(inputs.K, inputs.V, inputs.N, inputs.t, inputs.q, inputs.s,
                                 inputs.locations, inputs.depot, inputs.outgoing_arcs, inputs.incoming_arcs,
-                                inputs.depot_leave, inputs.depot_enter, inputs.a, inputs.b, inputs.M,
-                                maximum_vehicle_capacity, solver_time_limit_mins)
+                                inputs.depot_leave, inputs.depot_enter, inputs.a, inputs.b, inputs.M, inputs.Q,
+                                solver_time_limit_mins,
+                                maximum_travel_hours)
 
         model.initiate_solver()
         model.create_model_formulation()
@@ -64,14 +63,12 @@ def run_desrochers_et_all_1988(depot,
         model.run_model()
         model.compile_results()
 
+        return model.final_model_solution
+
     elif solver == 'gurobi':
         print('solving with gurobi')
 
+        return None
+
     else:
-        print('no solver is defined')
-
-    # run model #
-
-    # summarize results #
-
-    return None
+        return print('no solver is defined')
