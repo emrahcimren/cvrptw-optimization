@@ -2,7 +2,7 @@ certifi==2019.11.28
 icc-rt==2019.0
 intel-numpy==1.15.1
 intel-openmp==2019.0
-numpy==1.17.3
+numpy==1.18.1
 ortools==7.4.7247
 pandas==0.25.3
 pathlib==1.0.1

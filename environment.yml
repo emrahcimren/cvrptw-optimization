@@ -8,8 +8,6 @@ dependencies:
   - mkl-service=2.3.0=py36hb782905_0
   - mkl_fft=1.0.15=py36h14836fe_0
   - mkl_random=1.1.0=py36h675688f_0
-  - numpy=1.17.3=py36h4ceb530_0
-  - numpy-base=1.17.3=py36hc3f5095_0
   - pandas=0.25.3=py36ha925a31_0
   - pathlib=1.0.1=py36_1
   - pip=18.1=py36_0
@@ -29,6 +27,7 @@ dependencies:
     - intel-numpy==1.15.1
     - intel-openmp==2019.0
     - mkl==2019.0
+    - numpy==1.18.1
     - ortools==7.4.7247
     - protobuf==3.11.2
     - tbb==2019.0
