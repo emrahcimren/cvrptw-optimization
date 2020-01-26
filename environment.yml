@@ -6,7 +6,7 @@ dependencies:
   - certifi=2019.11.28=py36_0
   - icc_rt=2019.0.0=h0cc432a_1
   - mkl-service=2.3.0=py36hb782905_0
-  - mkl_fft=1.0.6
+  - mkl_fft=1.0.15=py36h14836fe_0
   - mkl_random=1.1.0=py36h675688f_0
   - numpy=1.17.3=py36h4ceb530_0
   - numpy-base=1.17.3=py36hc3f5095_0
@@ -25,9 +25,13 @@ dependencies:
   - wheel=0.33.6=py36_0
   - wincertstore=0.2=py36h7fe50ca_0
   - pip:
+    - icc-rt==2019.0
+    - intel-numpy==1.15.1
     - intel-openmp==2019.0
     - mkl==2019.0
     - ortools==7.4.7247
     - protobuf==3.11.2
+    - tbb==2019.0
+    - tbb4py==2019.0
 prefix: C:\ProgramData\Miniconda3\envs\cvrptw_optimization
 

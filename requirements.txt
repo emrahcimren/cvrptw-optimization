@@ -2,10 +2,6 @@ certifi==2019.11.28
 icc-rt==2019.0
 intel-numpy==1.15.1
 intel-openmp==2019.0
-mkl==2019.0
-mkl-fft==1.0.6
-mkl-random==1.0.1.1
-mkl-service==2.3.0
 numpy==1.17.3
 ortools==7.4.7247
 pandas==0.25.3
