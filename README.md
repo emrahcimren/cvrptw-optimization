@@ -73,5 +73,5 @@ d.run_desrochers_et_all_1988(depot,
                              vehicles, 
                              maximum_travel_hours,
                              solver_time_limit_mins,
-                             solver='ortools')
+                             solver='or tools')
 ```

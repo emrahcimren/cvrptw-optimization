@@ -13,32 +13,19 @@ from cvrptw_optimization.src import data as test_data
 
 class DesrochersTest(unittest.TestCase):
 
-    def set_up(self):
-
-        self.input_locations = test_data.locations_test
-        self.input_locations_with_clusters = test_data.locations_with_clusters_test
-        self.number_of_clusters = len(test_data.locations_with_clusters_test.CLUSTER.unique())
-        self.minimum_elements_in_a_cluster = test_data.minimum_elements_in_a_cluster
-        self.maximum_elements_in_a_cluster = test_data.maximum_elements_in_a_cluster
-        self.maximum_iteration = test_data.maximum_iteration
-        self.objective_range = test_data.objective_range
-        self.enable_minimum_maximum_elements_in_a_cluster = test_data.enable_minimum_maximum_elements_in_a_cluster
-
     def test_desrochers_et_all_1988(self):
         '''
         Test for desrochers_et_all_1988
         :return:
         '''
 
-        self.set_up()
-
         solution = d.run_desrochers_et_all_1988(test_data.depot,
                                                 test_data.locations,
                                                 test_data.transportation_matrix,
                                                 test_data.vehicles,
-                                                test_data.maximum_travel_hours,
+                                                maximum_travel_hours=22,
                                                 solver_time_limit_mins=2,
-                                                solver='ortools')
+                                                solver='or tools')
 
         self.assertTrue(len(solution) > 0)
 
