@@ -6,7 +6,7 @@ dependencies:
   - certifi=2019.11.28=py36_0
   - icc_rt=2019.0.0=h0cc432a_1
   - mkl-service=2.3.0=py36hb782905_0
-  - mkl_fft=1.0.15=py36h14836fe_0
+  - mkl_fft=1.0.6
   - mkl_random=1.1.0=py36h675688f_0
   - numpy=1.17.3=py36h4ceb530_0
   - numpy-base=1.17.3=py36hc3f5095_0
