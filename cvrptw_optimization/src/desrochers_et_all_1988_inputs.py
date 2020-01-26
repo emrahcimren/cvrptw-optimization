@@ -5,6 +5,7 @@ CVRPTW formulation by Desrochers et al 1988
     Vehicle routing with time windows: Optimization and approximation.
     In: Golden, B.L., Assad, A.A. (Eds.), Vehicle Routing: Methods and Studies. North-Holland, Amsterdam, pp. 65–84.
 '''
+import collections
 
 
 class ModelInputs:
@@ -27,26 +28,28 @@ class ModelInputs:
         self.s = None #stop times
         self.q = None #location demand
         self.Q = None #truck capacity
+        self.c = None #costs
 
         self.a = None #time window start
         self.b = None #time window end
 
         self.M = None #time bounds
 
-        self.incoming_arcs = None #ncoming arcs set
+        self.incoming_arcs = None #incoming arcs set
         self.outgoing_arcs = None #outgoing arcs set
 
         # prepare inputs
         self.create_set_of_vehicles()
         self.create_set_of_vertices()
         self.create_set_of_nodes()
+        self.crate_stop_times()
         self.create_transit_minutes()
         self.crate_location_demand()
-        self.crate_stop_times()
         self.create_time_windows()
         self.create_depot_time_windows()
         self.create_time_bound()
         self.create_incoming_and_outgoing_arcs()
+        self.crate_costs()
 
     def create_set_of_vehicles(self):
         '''
@@ -55,8 +58,19 @@ class ModelInputs:
         '''
 
         self.Q = {}
+        VehicleInputs = collections.namedtuple('VehicleInputs', ['CAPACITY',
+                                                                 'MAXIMUM_SOLO_TRAVEL_HOURS',
+                                                                 'MAXIMUM_TEAM_TRAVEL_HOURS',
+                                                                 'TEAM'])
         for row in self.vehicles.itertuples():
-            self.Q[row.VEHICLE_NAME] = row.CAPACITY
+            self.Q[row.VEHICLE_NAME] = (
+                VehicleInputs(
+                    CAPACITY=row.CAPACITY,
+                    MAXIMUM_SOLO_TRAVEL_HOURS=row.MAXIMUM_SOLO_TRAVEL_HOURS,
+                    MAXIMUM_TEAM_TRAVEL_HOURS=row.MAXIMUM_TEAM_TRAVEL_HOURS,
+                    TEAM=row.TEAM
+                )
+            )
 
         self.K = self.Q.keys()
 
@@ -90,15 +104,25 @@ class ModelInputs:
         :return:
         '''
         self.s = {}
+        StopInputs = collections.namedtuple('StopInputs', ['STOP_TIME_W_HELPER', 'STOP_TIME_WH_HELPER'])
         for location in self.V:
             if location == self.depot_leave:
-                stop_mins = 0
+                stop_mins1 = 0
+                stop_mins2 = 0
             elif location == self.depot_enter:
-                stop_mins = 0
+                stop_mins1 = 0
+                stop_mins2 = 0
             else:
                 stop = self.locations[self.locations['LOCATION_NAME'] == location]
-                stop_mins = stop['STOP_TIME'].iloc[0]
-            self.s[location] = stop_mins
+                stop_mins1 = stop['STOP_TIME_W_HELPER'].iloc[0]
+                stop_mins2 = stop['STOP_TIME_WH_HELPER'].iloc[0]
+
+            self.s[location] = (
+                StopInputs(
+                    STOP_TIME_W_HELPER=stop_mins1,
+                    STOP_TIME_WH_HELPER=stop_mins2
+                )
+            )
 
     def crate_location_demand(self):
         '''
@@ -109,6 +133,24 @@ class ModelInputs:
         for location in self.N:
             stop = self.locations[self.locations['LOCATION_NAME'] == location]
             self.q[location] = stop['DEMAND'].iloc[0]
+
+    def crate_costs(self):
+        '''
+        Costs
+        :return:
+        '''
+        self.c = {}
+        CostInputs = collections.namedtuple('CostInputs', ['TRANS_COST_PER_MINUTE',
+                                                           'HELPER_COST_PER_HELPER_PER_ROUTE',
+                                                           'TEAM_COST_PER_TEAM_PER_ROUTE'])
+        for row in self.vehicles.itertuples():
+            self.c[row.VEHICLE_NAME] = (
+                CostInputs(
+                    HELPER_COST_PER_HELPER_PER_ROUTE=row.HELPER_COST_PER_HELPER_PER_ROUTE,
+                    TEAM_COST_PER_TEAM_PER_ROUTE=row.TEAM_COST_PER_TEAM_PER_ROUTE,
+                    TRANS_COST_PER_MINUTE=row.TRANS_COST_PER_MINUTE
+                )
+            )
 
     def create_time_windows(self):
         '''
@@ -144,8 +186,8 @@ class ModelInputs:
         for location in self.N:
             a_s[location] = self.a[location] - self.t[self.depot_leave, location]
             b_s[location] = self.b[location] - self.t[self.depot_leave, location]
-            a_t[location] = self.a[location] + self.s[location] + self.t[location, self.depot_enter]
-            b_t[location] = self.b[location] + self.s[location] + self.t[location, self.depot_enter]
+            a_t[location] = self.a[location] + self.s[location].STOP_TIME_W_HELPER + self.t[location, self.depot_enter]
+            b_t[location] = self.b[location] + self.s[location].STOP_TIME_WH_HELPER + self.t[location, self.depot_enter]
 
         self.a[self.depot_leave] = min(a_s.values())
         self.b[self.depot_leave] = max(b_s.values())
@@ -159,7 +201,7 @@ class ModelInputs:
         '''
         self.M = {}
         for i, j in self.t.keys():
-            self.M[i, j] = max(0, self.b[i] + self.s[i] + self.t[i, j] - self.a[j])
+            self.M[i, j] = max(0, self.b[i] + self.s[i].STOP_TIME_W_HELPER + self.t[i, j] - self.a[j])
 
     def create_incoming_and_outgoing_arcs(self):
         '''

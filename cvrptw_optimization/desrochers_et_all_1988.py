@@ -16,7 +16,6 @@ def run_desrochers_et_all_1988(depot,
                                locations,
                                transportation_matrix,
                                vehicles,
-                               maximum_travel_hours,
                                solver_time_limit_mins,
                                solver='or tools'):
     '''
@@ -53,9 +52,9 @@ def run_desrochers_et_all_1988(depot,
 
         model = orf.Formulation(inputs.K, inputs.V, inputs.N, inputs.t, inputs.q, inputs.s,
                                 inputs.locations, inputs.depot, inputs.outgoing_arcs, inputs.incoming_arcs,
-                                inputs.depot_leave, inputs.depot_enter, inputs.a, inputs.b, inputs.M, inputs.Q,
-                                solver_time_limit_mins,
-                                maximum_travel_hours)
+                                inputs.depot_leave, inputs.depot_enter, inputs.a,
+                                inputs.b, inputs.M, inputs.Q, inputs.c,
+                                solver_time_limit_mins)
 
         model.initiate_solver()
         model.create_model_formulation()

@@ -13,8 +13,7 @@ class Formulation:
 
     def __init__(self, K, V, N, t, q, s, locations, depot,
                  outgoing_arcs, incoming_arcs, depot_leave, depot_enter,
-                 a, b, M, Q, solver_time_limit_mins,
-                 maximum_travel_hours):
+                 a, b, M, Q, c, solver_time_limit_mins):
 
         self.solver = None
         self.infinity = None
@@ -26,6 +25,7 @@ class Formulation:
         self.q = q
         self.s = s
         self.Q = Q
+        self.c = c
         self.incoming_arcs = incoming_arcs
         self.outgoing_arcs = outgoing_arcs
         self.depot_leave = depot_leave
@@ -33,8 +33,6 @@ class Formulation:
         self.a = a
         self.b = b
         self.M = M
-
-        self.maximum_travel_hours = maximum_travel_hours
 
         self.solver_time_limit_mins = None
         self.depot_lat = depot['LATITUDE'].iloc[0]
@@ -45,6 +43,9 @@ class Formulation:
 
         self.x = None
         self.w = None
+        self.z = None
+        self.y = None
+        self.v = None
 
         self.solution = None
 
@@ -68,6 +69,8 @@ class Formulation:
         '''
         self._create_allocation_variable()
         self._create_service_start_time_variable()
+        self._create_helper_and_team_variables()
+        self._enable_team()
         self._create_total_time_variable()
         self._create_customer_visit_constraint()
         self._create_vehicle_depot_leave_constraint()
@@ -76,9 +79,8 @@ class Formulation:
         self._create_time_variable_constraint()
         self._create_time_windows_constraint()
         self._create_vehicle_capacity_constraint()
-
-        if self.maximum_travel_hours is not None:
-            self._create_maximum_travel_time_constraint()
+        self._create_maximum_travel_time_constraint()
+        self.create_helper_team_relationship()
 
     def _create_allocation_variable(self):
         '''
@@ -100,10 +102,29 @@ class Formulation:
             for k in self.K:
                 self.w[i, k] = self.solver.NumVar(0, self.infinity, 'w[{}, {}]'.format(str(i), str(k)))
 
-    def _create_total_time_variable(self):
-        self.z = {}
+    def _create_helper_and_team_variables(self):
+        self.z = {} # teams
+        self.y = {} # helpers
         for k in self.K:
-            self.z[k] = self.solver.NumVar(0, self.infinity, 'z[{}]'.format(str(k)))
+            self.z[k] = self.solver.BoolVar('z[{}]'.format(str(k)))
+            self.y[k] = self.solver.BoolVar('y[{}]'.format(str(k)))
+
+    def _enable_team(self):
+        for k in self.K:
+            if self.Q[k].TEAM is not None:
+                if self.Q[k].TEAM:
+                    self.solver.Add(
+                        self.z[k]==1
+                    )
+                else:
+                    self.solver.Add(
+                        self.z[k]==0
+                    )
+
+    def _create_total_time_variable(self):
+        self.v = {}
+        for k in self.K:
+            self.v[k] = self.solver.NumVar(0, self.infinity, 'v[{}]'.format(str(k)))
 
     def _create_customer_visit_constraint(self):
         '''
@@ -111,7 +132,9 @@ class Formulation:
         :return:
         '''
         for i in self.N:
-            self.solver.Add(self.solver.Sum([self.x[i, j, k] for k in self.K for j in self.outgoing_arcs[i]]) == 1)
+            self.solver.Add(
+                self.solver.Sum([self.x[i, j, k] for k in self.K for j in self.outgoing_arcs[i]]) == 1
+            )
 
     def _create_vehicle_depot_leave_constraint(self):
         '''
@@ -119,7 +142,9 @@ class Formulation:
         :return:
         '''
         for k in self.K:
-            self.solver.Add(self.solver.Sum([self.x[self.depot_leave, j, k] for j in self.N]) == 1)
+            self.solver.Add(
+                self.solver.Sum([self.x[self.depot_leave, j, k] for j in self.N]) == 1
+            )
 
     def _create_flow_in_flow_out_constraint(self):
         '''
@@ -128,8 +153,10 @@ class Formulation:
         '''
         for i in self.N:
             for k in self.K:
-                self.solver.Add(self.solver.Sum([self.x[j, i, k] for j in self.incoming_arcs[i]]) - self.solver.Sum(
-                    [self.x[i, j, k] for j in self.outgoing_arcs[i]]) == 0)
+                self.solver.Add(
+                    self.solver.Sum([self.x[j, i, k] for j in self.incoming_arcs[i]]) -
+                    self.solver.Sum([self.x[i, j, k] for j in self.outgoing_arcs[i]]) == 0
+                )
 
     def _create_vehicle_depot_arriving_constraint(self):
         '''
@@ -137,7 +164,9 @@ class Formulation:
         :return:
         '''
         for k in self.K:
-            self.solver.Add(self.solver.Sum([self.x[i, self.depot_enter, k] for i in self.N]) == 1)
+            self.solver.Add(
+                self.solver.Sum([self.x[i, self.depot_enter, k] for i in self.N]) == 1
+            )
 
     def _create_time_variable_constraint(self):
         '''
@@ -147,8 +176,12 @@ class Formulation:
         for i, j in self.t.keys():
             for k in self.K:
                 self.solver.Add(
-                    self.w[j, k] - self.w[i, k] - self.s[i] - self.t[i, j] +
-                    self.M[i, j] - self.M[i, j] * self.x[i, j, k] >= 0)
+                    self.w[j, k] - self.w[i, k] -
+                    self.s[i].STOP_TIME_W_HELPER * self.z[k] -
+                    self.s[i].STOP_TIME_WH_HELPER * (1 - self.z[k]) -
+                    self.t[i, j] +
+                    self.M[i, j] - self.M[i, j] * self.x[i, j, k] >= 0
+                )
 
     def _create_time_windows_constraint(self):
         '''
@@ -167,7 +200,8 @@ class Formulation:
         '''
         for k in self.K:
             self.solver.Add(
-                self.solver.Sum([self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]]) <= self.Q[k]
+                self.solver.Sum([self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]]) <=
+                self.Q[k].CAPACITY
             )
 
     def _create_maximum_travel_time_constraint(self):
@@ -176,22 +210,44 @@ class Formulation:
         :return:
         '''
         for k in self.K:
-            for i in self.N:
-                self.solver.Add(
-                    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.z[k]
-                )
-                self.solver.Add(
-                    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.maximum_travel_hours*60
-                )
+            self.solver.Add(
+                self.w[self.depot_enter, k] - self.w[self.depot_leave, k] <=
+                self.z[k]*self.Q[k].MAXIMUM_TEAM_TRAVEL_HOURS*60 + (1-self.z[k])*self.Q[k].MAXIMUM_SOLO_TRAVEL_HOURS*60
+            )
+                #self.solver.Add(
+                #    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.v[k]
+                #)
+
+    def create_helper_team_relationship(self):
+        '''
+        If team=1, then helper=1
+        If team=0, then helper can be 0 or 1
+        :return:
+        '''
+        for k in self.K:
+            self.solver.Add(
+                self.z[k] - self.y[k] <= 0
+            )
 
     def create_model_objective(self):
         # add objective
-        self.solver.Minimize(self.solver.Sum(
-            [self.t[i, j] * self.x[i, j, k] for k in self.K for i, j in self.t.keys()]))
-
+        self.solver.Minimize(
+            self.solver.Sum(
+                [self.c[k].TRANS_COST_PER_MINUTE * self.t[i, j] * self.x[i, j, k] +
+                 self.c[k].TEAM_COST_PER_TEAM_PER_ROUTE * self.z[k] +
+                 self.c[k].HELPER_COST_PER_HELPER_PER_ROUTE * self.y[k]
+                 for k in self.K for i, j in self.t.keys()
+                 ]
+            )
+        )
         #self.solver.Minimize(
         #    self.solver.Sum(
-        #        [self.z[k] for k in self.K]
+        #        [
+        #            self.c[k].TRANS_COST_PER_MINUTE * self.v[k] +
+        #            self.c[k].TEAM_COST_PER_TEAM_PER_ROUTE * self.z[k] +
+        #            self.c[k].HELPER_COST_PER_HELPER_PER_ROUTE * self.y[k]
+        #            for k in self.K
+        #        ]
         #    )
         #)
 
@@ -236,13 +292,18 @@ class Formulation:
                 else:
                     event = 'SERVICING'
 
+                service_time = self.s[i].STOP_TIME_W_HELPER * self.y[k].solution_value() + \
+                               self.s[i].STOP_TIME_WH_HELPER * (1-self.y[k].solution_value())
+
                 service_start_time.append({'LOCATION_NAME': i,
                                            'VEHICLE': k,
                                            'EVENT': event,
+                                           'HELPER': self.y[k].solution_value(),
+                                           'TEAM': self.z[k].solution_value(),
                                            'TIME_WINDOW_START_MINS': self.a[i],
                                            'SERVICE_START_MINUTES': self.w[i, k].solution_value(),
-                                           'SERVICE_TIME': self.s[i],
-                                           'SERVICE_END_MINUTES': self.w[i, k].solution_value() + self.s[i],
+                                           'SERVICE_TIME': service_time,
+                                           'SERVICE_END_MINUTES': self.w[i, k].solution_value() + service_time,
                                            'TIME_WINDOW_END_MINUTES': self.b[i]})
         service_start_time = pd.DataFrame(service_start_time)
         self.service_start_time = service_start_time.sort_values(['VEHICLE', 'SERVICE_START_MINUTES'])
