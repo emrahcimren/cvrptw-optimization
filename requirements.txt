@@ -1,7 +1,7 @@
 certifi==2019.11.28
 intel-openmp==2019.0
 mkl==2019.0
-mkl-fft==1.0.15
+mkl-fft==1.0.6
 mkl-random==1.1.0
 mkl-service==2.3.0
 numpy==1.17.3
