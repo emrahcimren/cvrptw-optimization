@@ -1,4 +1,4 @@
-name: cvrptw2
+name: cvrptw
 channels:
   - defaults
 dependencies:
@@ -16,7 +16,6 @@ dependencies:
   - pip:
     - bleach==3.1.0
     - chardet==3.0.4
-    - cimren-cvrptw-optimization==1.0.5
     - docutils==0.16
     - idna==2.8
     - importlib-metadata==1.4.0
@@ -39,5 +38,5 @@ dependencies:
     - urllib3==1.25.8
     - webencodings==0.5.1
     - zipp==2.1.0
-prefix: C:\ProgramData\Miniconda3\envs\cvrptw2
+prefix: C:\ProgramData\Miniconda3\envs\cvrptw
 
