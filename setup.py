@@ -8,7 +8,6 @@ def parse_requirements(filename):
     :param filename:
     :return:
     '''
-
     lineiter = (line.strip() for line in open(filename))
     return [line for line in lineiter if line and not line.startswith("#")]
 
@@ -25,7 +24,7 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="cimren-cvrptw-optimization",
-    version="1.0.4",
+    version="1.0.6",
     description="CVRPTW Optimization Models",
     long_description=README,
     long_description_content_type="text/markdown",
@@ -40,7 +39,7 @@ setup(
     ],
     packages=["cvrptw_optimization", "cvrptw_optimization/src"],
     include_package_data=True,
-    install_requires=reqs,
+    install_requires=['setuptools', 'pathlib'] + reqs,
     #entry_points={
     #    "console_scripts": [
     #        "realpython=reader.__main__:main",
