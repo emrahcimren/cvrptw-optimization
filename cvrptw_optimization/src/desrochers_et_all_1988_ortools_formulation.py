@@ -13,11 +13,10 @@ class Formulation:
 
     def __init__(self, K, V, N, t, q, s, locations, depot,
                  outgoing_arcs, incoming_arcs, depot_leave, depot_enter,
-                 a, b, M, Q, c, solver_time_limit_mins, fix_team=False):
+                 a, b, M, Q, c, solver_time_limit_mins):
 
         self.solver = None
         self.infinity = None
-        self.fix_team = fix_team
 
         self.K = K
         self.V = V
@@ -71,8 +70,7 @@ class Formulation:
         self._create_allocation_variable()
         self._create_service_start_time_variable()
         self._create_helper_and_team_variables()
-        if self.fix_team:
-            self._fix_team()
+        self._fix_team()
         self._create_total_time_variable()
         self._create_customer_visit_constraint()
         self._create_vehicle_depot_leave_constraint()
@@ -114,11 +112,11 @@ class Formulation:
     def _fix_team(self):
         for k in self.K:
             if self.Q[k].TEAM is not None:
-                if self.Q[k].TEAM:
+                if self.Q[k].TEAM == 'assign':
                     self.solver.Add(
                         self.z[k]==1
                     )
-                else:
+                elif self.Q[k].TEAM == 'not assign':
                     self.solver.Add(
                         self.z[k]==0
                     )

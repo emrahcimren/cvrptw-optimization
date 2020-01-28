@@ -49,8 +49,51 @@ Models
 Inputs
 ------
 
+#### Depot
 
-Data
+Data frame for inputs.
+
+| LOCATION_NAME   |   LATITUDE |   LONGITUDE |
+|:----------------|-----------:|------------:|
+| Depot           |    36.1627 |    -86.7816 |
+
+#### Locations
+
+Data frame of locations for routing.
+
+| LOCATION_NAME   |   LATITUDE |   LONGITUDE |   TW_START_MINUTES |   TW_END_MINUTES |   STOP_TIME_WH_HELPER |   STOP_TIME_W_HELPER |   DEMAND |
+|:----------------|-----------:|------------:|-------------------:|-----------------:|----------------------:|---------------------:|---------:|
+| Loc 1           |    35.9021 |    -84.1508 |                960 |             1950 |                    27 |                   21 |        1 |
+| Loc 2           |    35.7498 |    -83.9922 |                960 |             1950 |                    27 |                   21 |        1 |
+| Loc 3           |    35.9077 |    -83.8392 |                960 |             1950 |                    27 |                   21 |        1 |
+| Loc 4           |    35.9077 |    -83.8392 |                960 |             1950 |                    27 |                   21 |        1 |
+| Loc 5           |    35.8625 |    -84.0666 |                960 |             1950 |                    27 |                   21 |        1 |
+
+#### Transportation Matrix
+
+Data frame of drive minutes.
+
+| FROM_LOCATION_NAME   | TO_LOCATION_NAME   |   FROM_LATITUDE |   FROM_LONGITUDE |   TO_LATITUDE |   TO_LONGITUDE |   DRIVE_MINUTES |
+|:---------------------|:-------------------|----------------:|-----------------:|--------------:|---------------:|----------------:|
+| Depot                | Depot              |         36.1627 |         -86.7816 |       36.1627 |       -86.7816 |            0    |
+| Depot                | Loc 1              |         36.1627 |         -86.7816 |       35.9021 |       -84.1508 |          163.85 |
+| Depot                | Loc 2              |         36.1627 |         -86.7816 |       35.7498 |       -83.9922 |          206.06 |
+| Depot                | Loc 3              |         36.1627 |         -86.7816 |       35.9077 |       -83.8392 |          210.03 |
+| Depot                | Loc 4              |         36.1627 |         -86.7816 |       35.9077 |       -83.8392 |          210.03 |
+
+#### Vehicles
+
+Data frame for vehicles.
+
+TEAM='assign' if route uses a team truck.
+TEAM='not assign' if route does not use a team truck.
+TEAM='select' if model decides using a team truck.
+
+| VEHICLE_NAME   |   CAPACITY |   HELPER_COST_PER_HELPER_PER_ROUTE |   MAXIMUM_SOLO_TRAVEL_HOURS |   MAXIMUM_TEAM_TRAVEL_HOURS | TEAM   |   TEAM_COST_PER_TEAM_PER_ROUTE |   TRANS_COST_PER_MINUTE | TYPE            |
+|:---------------|-----------:|-----------------------------------:|----------------------------:|----------------------------:|:-------|-------------------------------:|------------------------:|:----------------|
+| Vehicle 1      |         20 |                               1200 |                          12 |                          20 | assign   |                           2000 |                       5 | 48 FOOTER TRUCK |
+
+Sample Data
 ----
 Package has a sample data set
 

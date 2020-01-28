@@ -17,8 +17,7 @@ def run_desrochers_et_all_1988(depot,
                                transportation_matrix,
                                vehicles,
                                solver_time_limit_mins,
-                               solver='or tools',
-                               fix_team=False):
+                               solver='or tools'):
     '''
     Run Desrochers model
     :param depot:
@@ -56,7 +55,7 @@ def run_desrochers_et_all_1988(depot,
                                 inputs.locations, inputs.depot, inputs.outgoing_arcs, inputs.incoming_arcs,
                                 inputs.depot_leave, inputs.depot_enter, inputs.a,
                                 inputs.b, inputs.M, inputs.Q, inputs.c,
-                                solver_time_limit_mins, fix_team)
+                                solver_time_limit_mins)
 
         model.initiate_solver()
         model.create_model_formulation()

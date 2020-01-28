@@ -12,7 +12,7 @@ vehicles = {'Vehicle 1': {'TYPE': '48 FOOTER TRUCK',
                           'TRANS_COST_PER_MINUTE': 5,
                           'HELPER_COST_PER_HELPER_PER_ROUTE': 1200,
                           'TEAM_COST_PER_TEAM_PER_ROUTE': 2000,
-                          'TEAM': True}}
+                          'TEAM': 'assign'}}
 
 depot = {'Depot': {'LATITUDE': 36.16266, 'LONGITUDE': -86.7816}}
 
