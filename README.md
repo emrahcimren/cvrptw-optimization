@@ -96,11 +96,17 @@ Data frame for vehicles.
 
 TEAM='assign' if route uses a team truck.
 TEAM='not assign' if route does not use a team truck.
-TEAM='select' if model decides using a team truck.
+TEAM='select' if model decides using a team truck or not.
 
-| VEHICLE_NAME   |   CAPACITY |   HELPER_COST_PER_HELPER_PER_ROUTE |   MAXIMUM_SOLO_TRAVEL_HOURS |   MAXIMUM_TEAM_TRAVEL_HOURS | TEAM   |   TEAM_COST_PER_TEAM_PER_ROUTE |   TRANS_COST_PER_MINUTE | TYPE            |
-|:---------------|-----------:|-----------------------------------:|----------------------------:|----------------------------:|:-------|-------------------------------:|------------------------:|:----------------|
-| Vehicle 1      |         20 |                               1200 |                          12 |                          20 | assign   |                           2000 |                       5 | 48 FOOTER TRUCK |
+HELPER='assign' if route uses a team truck.
+HELPER='not assign' if route does not use a team truck.
+HELPER='select' if model decides using a team truck or not.
+
+Note that if TEAM='assign', then HELPER='assign' automatically.
+
+| VEHICLE_NAME   |   CAPACITY |   HELPER_COST_PER_HELPER_PER_ROUTE |   MAXIMUM_SOLO_TRAVEL_HOURS |   MAXIMUM_TEAM_TRAVEL_HOURS | TEAM   |  HELPER | TEAM_COST_PER_TEAM_PER_ROUTE |   TRANS_COST_PER_MINUTE | TYPE            |
+|:---------------|-----------:|-----------------------------------:|----------------------------:|----------------------------:|:-------|:--------|-------------------------------:|------------------------:|:----------------|
+| Vehicle 1      |         20 |                               1200 |                          12 |                          20 | assign   | assign |                          2000 |                       5 | 48 FOOTER TRUCK |
 
 Sample Data
 ----
@@ -117,6 +123,8 @@ data.vehicles
 How to use
 ----------
 
+To be able run an Or Tools model:
+
 ```
 from cvrptw_optimization.src import data
 from cvrptw_optimization import desrochers_et_all_1988 as d
@@ -125,5 +133,20 @@ d.run_desrochers_et_all_1988(data.depot,
                              data.transportation_matrix,
                              data.vehicles,
                              solver_time_limit_mins=1,
+                             mip_gap = 0,
                              solver='or tools')
+```
+
+To be able run a Gurobi model:
+
+```
+from cvrptw_optimization.src import data
+from cvrptw_optimization import desrochers_et_all_1988 as d
+d.run_desrochers_et_all_1988(data.depot,
+                             data.locations,
+                             data.transportation_matrix,
+                             data.vehicles,
+                             solver_time_limit_mins=1,
+                             mip_gap = 0,
+                             solver='gurobi')
 ```
