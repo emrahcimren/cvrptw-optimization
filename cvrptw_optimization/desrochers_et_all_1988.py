@@ -17,6 +17,7 @@ def run_desrochers_et_all_1988(depot,
                                transportation_matrix,
                                vehicles,
                                solver_time_limit_mins,
+                               mip_gap,
                                solver='or tools'):
     '''
     Run Desrochers model
@@ -24,10 +25,9 @@ def run_desrochers_et_all_1988(depot,
     :param locations:
     :param transportation_matrix:
     :param vehicles:
-    :param maximum_travel_hours:
     :param solver_time_limit_mins:
+    :param mip_gap:
     :param solver:
-    :param fix_team:
     :return:
     '''
 
@@ -55,7 +55,7 @@ def run_desrochers_et_all_1988(depot,
                                 inputs.locations, inputs.depot, inputs.outgoing_arcs, inputs.incoming_arcs,
                                 inputs.depot_leave, inputs.depot_enter, inputs.a,
                                 inputs.b, inputs.M, inputs.Q, inputs.c,
-                                solver_time_limit_mins)
+                                solver_time_limit_mins, mip_gap)
 
         model.initiate_solver()
         model.create_model_formulation()
@@ -67,8 +67,20 @@ def run_desrochers_et_all_1988(depot,
 
     elif solver == 'gurobi':
         print('solving with gurobi')
+        from cvrptw_optimization.src import desrochers_et_all_1988_gurobi_formulation as grf
+        model = grf.Formulation(inputs.K, inputs.V, inputs.N, inputs.t, inputs.q, inputs.s,
+                                inputs.locations, inputs.depot, inputs.outgoing_arcs, inputs.incoming_arcs,
+                                inputs.depot_leave, inputs.depot_enter, inputs.a,
+                                inputs.b, inputs.M, inputs.Q, inputs.c,
+                                solver_time_limit_mins, mip_gap)
 
-        return None
+        model.initiate_solver()
+        model.create_model_formulation()
+        model.create_model_objective()
+        model.run_model()
+        model.compile_results()
+
+        return model.final_model_solution
 
     else:
         return print('no solver is defined')

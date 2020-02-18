@@ -6,6 +6,20 @@ CVRPTW formulation by Desrochers et al 1988
     In: Golden, B.L., Assad, A.A. (Eds.), Vehicle Routing: Methods and Studies. North-Holland, Amsterdam, pp. 65–84.
 '''
 
+import pandas as pd
+
+
+def convert_dictionary_to_pandas(locations):
+    '''
+    Convert dictionary to pandas
+    :param locations:
+    :return:
+    '''
+    locations = pd.DataFrame(locations).T
+    locations = locations.reset_index()
+    locations.index.name = None
+    return locations
+
 
 def filter_transportation_matrix(transportation_matrix, locations_name_list, depot_name_list):
     '''

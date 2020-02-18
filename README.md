@@ -37,6 +37,15 @@ Installation
 pip install cimren-cvrptw-optimization
 ```
 
+Tips
+------------
+Convert pandas data frame to dictionary. 
+
+```
+df.set_index("ID", drop=True, inplace=True)
+dictionary = df.to_dict(orient="index")
+```
+
 Models
 ------
 

@@ -1,7 +1,8 @@
 '''
 Input data for modeling test
 '''
-import pandas as pd
+
+from cvrptw_optimization.src.desrochers_et_all_1988_helpers import convert_dictionary_to_pandas
 
 solver_time_limit_minutes = 2
 
@@ -12,7 +13,28 @@ vehicles = {'Vehicle 1': {'TYPE': '48 FOOTER TRUCK',
                           'TRANS_COST_PER_MINUTE': 5,
                           'HELPER_COST_PER_HELPER_PER_ROUTE': 1200,
                           'TEAM_COST_PER_TEAM_PER_ROUTE': 2000,
-                          'TEAM': 'assign'}}
+                          'TEAM': 'assign',
+                          'HELPER': 'assign'}}
+
+vehicles1 = {'Vehicle 1': {'TYPE': '48 FOOTER TRUCK',
+                          'CAPACITY': 20,
+                          'MAXIMUM_SOLO_TRAVEL_HOURS': 12,
+                          'MAXIMUM_TEAM_TRAVEL_HOURS': 20,
+                          'TRANS_COST_PER_MINUTE': 5,
+                          'HELPER_COST_PER_HELPER_PER_ROUTE': 1200,
+                          'TEAM_COST_PER_TEAM_PER_ROUTE': 2000,
+                          'TEAM': 'select',
+                          'HELPER': 'select'}}
+
+vehicles2 = {'Vehicle 1': {'TYPE': '48 FOOTER TRUCK',
+                          'CAPACITY': 20,
+                          'MAXIMUM_SOLO_TRAVEL_HOURS': 12,
+                          'MAXIMUM_TEAM_TRAVEL_HOURS': 20,
+                          'TRANS_COST_PER_MINUTE': 5,
+                          'HELPER_COST_PER_HELPER_PER_ROUTE': 1200,
+                          'TEAM_COST_PER_TEAM_PER_ROUTE': 2000,
+                          'TEAM': 'not assign',
+                          'HELPER': 'not assign'}}
 
 depot = {'Depot': {'LATITUDE': 36.16266, 'LONGITUDE': -86.7816}}
 
@@ -433,18 +455,6 @@ transportation_matrix = {
     ('Loc 12', 'Loc 12'): {'FROM_LATITUDE': 35.91035, 'FROM_LONGITUDE': -84.09155, 'TO_LATITUDE': 35.91035,
                          'TO_LONGITUDE': -84.09155, 'DRIVE_MINUTES': 0.0}}
 
-def convert_dictionary_to_pandas(locations):
-    '''
-    Convert dictionary to pandas
-    :param locations:
-    :return:
-    '''
-    locations = pd.DataFrame(locations).T
-    locations = locations.reset_index()
-    locations.index.name = None
-    return locations
-
-
 depot = convert_dictionary_to_pandas(depot)
 depot.rename(columns={'index': 'LOCATION_NAME'}, inplace=True)
 
@@ -457,3 +467,9 @@ transportation_matrix.rename(columns={'level_0': 'FROM_LOCATION_NAME',
 
 vehicles = convert_dictionary_to_pandas(vehicles)
 vehicles.rename(columns={'index': 'VEHICLE_NAME'}, inplace=True)
+
+vehicles1 = convert_dictionary_to_pandas(vehicles1)
+vehicles1.rename(columns={'index': 'VEHICLE_NAME'}, inplace=True)
+
+vehicles2 = convert_dictionary_to_pandas(vehicles2)
+vehicles2.rename(columns={'index': 'VEHICLE_NAME'}, inplace=True)

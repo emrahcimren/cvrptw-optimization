@@ -61,14 +61,16 @@ class ModelInputs:
         VehicleInputs = collections.namedtuple('VehicleInputs', ['CAPACITY',
                                                                  'MAXIMUM_SOLO_TRAVEL_HOURS',
                                                                  'MAXIMUM_TEAM_TRAVEL_HOURS',
-                                                                 'TEAM'])
+                                                                 'TEAM',
+                                                                 'HELPER'])
         for row in self.vehicles.itertuples():
             self.Q[row.VEHICLE_NAME] = (
                 VehicleInputs(
                     CAPACITY=row.CAPACITY,
                     MAXIMUM_SOLO_TRAVEL_HOURS=row.MAXIMUM_SOLO_TRAVEL_HOURS,
                     MAXIMUM_TEAM_TRAVEL_HOURS=row.MAXIMUM_TEAM_TRAVEL_HOURS,
-                    TEAM=row.TEAM
+                    TEAM=row.TEAM,
+                    HELPER=row.HELPER
                 )
             )
 

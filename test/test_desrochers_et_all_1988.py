@@ -44,6 +44,7 @@ class DesrochersTest(unittest.TestCase):
                                                 test_data.transportation_matrix,
                                                 test_data.vehicles,
                                                 solver_time_limit_mins=1,
+                                                mip_gap=0.01,
                                                 solver='or tools')
         self.assertTrue(len(solution) > 0)
 

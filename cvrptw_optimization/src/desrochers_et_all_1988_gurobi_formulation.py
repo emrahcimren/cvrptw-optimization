@@ -6,7 +6,7 @@ CVRPTW formulation by Desrochers et al 1988
 '''
 
 import pandas as pd
-from ortools.linear_solver import pywraplp
+from gurobipy import *
 
 
 class Formulation:
@@ -47,6 +47,16 @@ class Formulation:
         self.y = None
         self.v = None
 
+        self.x_set = None
+        self.w_set = None
+
+        self.objective = None
+
+        self.x_solution = None
+        self.y_solution = None
+        self.z_solution = None
+        self.w_solution = None
+
         self.solution = None
 
         self.visit_orders = None
@@ -59,19 +69,17 @@ class Formulation:
         Function to initiate solver
         :return:
         '''
-        self.solver = pywraplp.Solver('SolveIntegerProblem', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
-        self.infinity = self.solver.infinity()
+        self.solver = Model('Desrochers et al 1988')
 
     def create_model_formulation(self):
         '''
-        Create model formulation
+        Function to create model formulation
         :return:
         '''
         self._create_allocation_variable()
         self._create_service_start_time_variable()
         self._create_helper_and_team_variables()
         self._fix_team()
-        self._fix_helpers()
         self._create_total_time_variable()
         self._create_customer_visit_constraint()
         self._create_vehicle_depot_leave_constraint()
@@ -88,149 +96,177 @@ class Formulation:
         Allocation variable; x_ijk = 1 if location j is visited after location i by vehicle k; 0 otherwise
         :return:
         '''
-        self.x = {}
+
+        self.x_set = {}
         for i, j in self.t.keys():
             for k in self.K:
-                self.x[i, j, k] = self.solver.BoolVar('x[{}, {}, {}]'.format(str(i), str(j), str(k)))
+                self.x_set[i, j, k] = 0
+
+        self.x = self.solver.addVars(
+            self.x_set.keys(),
+            vtype=GRB.BINARY,
+            name="allocation",
+        )
 
     def _create_service_start_time_variable(self):
         '''
         Service start variable; w_ik = time when location i is started by vehicle k
         :return:
         '''
-        self.w = {}
+
+        self.w_set = {}
         for i in self.V:
             for k in self.K:
-                self.w[i, k] = self.solver.NumVar(0, self.infinity, 'w[{}, {}]'.format(str(i), str(k)))
+                self.w_set[i, k] = 0
+
+        self.w = self.solver.addVars(self.w_set.keys(), name="time")
 
     def _create_helper_and_team_variables(self):
-        self.z = {} # teams
-        self.y = {} # helpers
-        for k in self.K:
-            self.z[k] = self.solver.BoolVar('z[{}]'.format(str(k)))
-            self.y[k] = self.solver.BoolVar('y[{}]'.format(str(k)))
+        self.z = self.solver.addVars(
+            self.K,
+            vtype=GRB.BINARY,
+            name="teams",
+        )  # teams
+        self.y = self.solver.addVars(
+            self.K,
+            vtype=GRB.BINARY,
+            name="helpers",
+        )  # helpers
 
     def _fix_team(self):
         for k in self.K:
             if self.Q[k].TEAM is not None:
                 if self.Q[k].TEAM == 'assign':
-                    self.solver.Add(
+                    self.solver.addConstr(
                         self.z[k]==1
                     )
                 elif self.Q[k].TEAM == 'not assign':
-                    self.solver.Add(
+                    self.solver.addConstr(
                         self.z[k]==0
                     )
 
-    def _fix_helpers(self):
-        for k in self.K:
-            if self.Q[k].HELPER is not None:
-                if self.Q[k].TEAM != 'assign':
-                    if self.Q[k].HELPER == 'assign':
-                        self.solver.Add(
-                            self.y[k]==1
-                        )
-                    elif self.Q[k].HELPER == 'not assign':
-                        self.solver.Add(
-                            self.y[k]==0
-                        )
-
     def _create_total_time_variable(self):
-        self.v = {}
-        for k in self.K:
-            self.v[k] = self.solver.NumVar(0, self.infinity, 'v[{}]'.format(str(k)))
+        self.v = self.solver.addVars(self.K, name="total time")
 
     def _create_customer_visit_constraint(self):
         '''
         Each customer is visited exactly once
         :return:
         '''
-        for i in self.N:
-            self.solver.Add(
-                self.solver.Sum([self.x[i, j, k] for k in self.K for j in self.outgoing_arcs[i]]) == 1
-            )
+
+        self.solver.addConstrs(
+            (quicksum(self.x[i, j, k] for k in self.K for j in self.outgoing_arcs[i]) == 1
+             for i in self.N), "Each customer is visited exactly once"
+        )
 
     def _create_vehicle_depot_leave_constraint(self):
         '''
         Each vehicle is visiting one location after leaving depot
         :return:
         '''
-        for k in self.K:
-            self.solver.Add(
-                self.solver.Sum([self.x[self.depot_leave, j, k] for j in self.N]) == 1
-            )
+
+        self.solver.addConstrs(
+            (
+                quicksum(self.x[self.depot_leave, j, k] for j in self.N) == 1
+                for k in self.K
+            ),
+            "Each vehicle is visiting one location after leaving depot"
+        )
 
     def _create_flow_in_flow_out_constraint(self):
         '''
         Flow conservation
         :return:
         '''
-        for i in self.N:
-            for k in self.K:
-                self.solver.Add(
-                    self.solver.Sum([self.x[j, i, k] for j in self.incoming_arcs[i]]) -
-                    self.solver.Sum([self.x[i, j, k] for j in self.outgoing_arcs[i]]) == 0
-                )
+        self.solver.addConstrs(
+            (
+                quicksum(self.x[j, i, k] for j in self.incoming_arcs[i]) - quicksum(self.x[i, j, k] for j in self.outgoing_arcs[i]) == 0
+                for i in self.N for k in self.K
+             ),
+            "Flow conservation"
+        )
 
     def _create_vehicle_depot_arriving_constraint(self):
         '''
         Each vehicle is arriving from one location to depot
         :return:
         '''
-        for k in self.K:
-            self.solver.Add(
-                self.solver.Sum([self.x[i, self.depot_enter, k] for i in self.N]) == 1
-            )
+        self.solver.addConstrs(
+            (
+                quicksum(
+                    self.x[i, self.depot_enter, k] for i in self.N
+                ) == 1
+                for k in self.K
+            ),
+            "Each vehicle is arriving from one location to depot"
+        )
 
     def _create_time_variable_constraint(self):
         '''
         Time variable constraint
         :return:
         '''
-        for i, j in self.t.keys():
-            for k in self.K:
-                self.solver.Add(
-                    self.w[j, k] - self.w[i, k] -
-                    self.s[i].STOP_TIME_W_HELPER * self.z[k] -
-                    self.s[i].STOP_TIME_WH_HELPER * (1 - self.z[k]) -
-                    self.t[i, j] +
-                    self.M[i, j] - self.M[i, j] * self.x[i, j, k] >= 0
-                )
+
+        self.solver.addConstrs(
+            (
+                self.w[j, k] - self.w[i, k] -
+                self.s[i].STOP_TIME_W_HELPER * self.z[k] -
+                self.s[i].STOP_TIME_WH_HELPER * (1 - self.z[k]) -
+                self.t[i, j] +
+                self.M[i, j] - self.M[i, j] * self.x[i, j, k] >= 0
+                for i, j in self.t.keys() for k in self.K
+            ),
+            "Time variable constraint"
+        )
 
     def _create_time_windows_constraint(self):
         '''
         Time windows
         :return:
         '''
-        for i in self.V:
-            for k in self.K:
-                self.solver.Add(self.w[i, k] >= self.a[i])
-                self.solver.Add(self.w[i, k] <= self.b[i])
+        self.solver.addConstrs(
+            (
+                self.w[i, k] >= self.a[i]
+                for i in self.V for k in self.K
+            ),
+            "Early Time windows"
+        )
+
+        self.solver.addConstrs(
+            (
+                self.w[i, k] <= self.b[i]
+                for i in self.V for k in self.K
+            ),
+            "Late Time windows"
+        )
 
     def _create_vehicle_capacity_constraint(self):
         '''
         Total volume in the vehicle can not exceed the total capacity
         :return:
         '''
-        for k in self.K:
-            self.solver.Add(
-                self.solver.Sum([self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]]) <=
-                self.Q[k].CAPACITY
-            )
+        self.solver.addConstrs(
+            (
+                quicksum(self.q[i]*self.x[i, j, k] for i in self.N for j in self.outgoing_arcs[i]) <= self.Q[k].CAPACITY
+                for k in self.K
+            ),
+            "Total volume in the vehicle can not exceed the total capacity"
+        )
 
     def _create_maximum_travel_time_constraint(self):
         '''
         Total travel time can not exceed total travel time
         :return:
         '''
-        for k in self.K:
-            self.solver.Add(
+        self.solver.addConstrs(
+            (
                 self.w[self.depot_enter, k] - self.w[self.depot_leave, k] <=
-                self.z[k]*self.Q[k].MAXIMUM_TEAM_TRAVEL_HOURS*60 + (1-self.z[k])*self.Q[k].MAXIMUM_SOLO_TRAVEL_HOURS*60
-            )
-                #self.solver.Add(
-                #    self.w[self.depot_enter, k] - self.w[i, k] + self.t[self.depot_leave, i] <= self.v[k]
-                #)
+                self.z[k] * self.Q[k].MAXIMUM_TEAM_TRAVEL_HOURS * 60 + (1 - self.z[k]) * self.Q[
+                    k].MAXIMUM_SOLO_TRAVEL_HOURS * 60
+                for k in self.K
+            ),
+            "Total travel time can not exceed total travel time"
+        )
 
     def create_helper_team_relationship(self):
         '''
@@ -238,56 +274,60 @@ class Formulation:
         If team=0, then helper can be 0 or 1
         :return:
         '''
-        for k in self.K:
-            self.solver.Add(
+        self.solver.addConstrs(
+            (
                 self.z[k] - self.y[k] <= 0
-            )
+                for k in self.K
+            ),
+            "Helper team relationship"
+        )
 
     def create_model_objective(self):
-        # add objective
-        self.solver.Minimize(
-            self.solver.Sum(
-                [self.c[k].TRANS_COST_PER_MINUTE * self.t[i, j] * self.x[i, j, k] +
-                 self.c[k].TEAM_COST_PER_TEAM_PER_ROUTE * self.z[k] +
-                 self.c[k].HELPER_COST_PER_HELPER_PER_ROUTE * self.y[k]
-                 for k in self.K for i, j in self.t.keys()
-                 ]
-            )
-        )
-        #self.solver.Minimize(
-        #    self.solver.Sum(
-        #        [
-        #            self.c[k].TRANS_COST_PER_MINUTE * self.v[k] +
-        #            self.c[k].TEAM_COST_PER_TEAM_PER_ROUTE * self.z[k] +
-        #            self.c[k].HELPER_COST_PER_HELPER_PER_ROUTE * self.y[k]
-        #            for k in self.K
-        #        ]
-        #    )
-        #)
+
+        self.objective = LinExpr()
+
+        for k in self.K:
+            for i, j in self.t.keys():
+                self.objective += (
+                        self.c[k].TRANS_COST_PER_MINUTE * self.t[i, j] * self.x[i, j, k] +
+                        self.c[k].TEAM_COST_PER_TEAM_PER_ROUTE * self.z[k] +
+                        self.c[k].HELPER_COST_PER_HELPER_PER_ROUTE * self.y[k]
+                )
+
+        self.solver.setObjective(self.objective)
 
     def run_model(self):
-        # solver.Minimize(1)
-        solver_parameters = pywraplp.MPSolverParameters()
-        solver_parameters.SetDoubleParam(pywraplp.MPSolverParameters.RELATIVE_MIP_GAP, 0)
-        self.solver.SetTimeLimit(self.solver_time_limit_mins * 60 * 1000)
-        self.solver.EnableOutput()
-        self.solution = self.solver.Solve()
+        '''
+        Run model
+        :return:
+        '''
+        self.solver.modelSense = GRB.MINIMIZE
+        self.solver.setParam('TimeLimit',  self.solver_time_limit_mins*60)
+        self.solver.setParam('MIPGap', self.mip_gap)
+        self.solver.optimize()
 
-        print('Number of variables in model = {}'.format(str(self.solver.NumVariables())))
-        print('Number of constraints in model = {}'.format(str(self.solver.NumConstraints())))
+        print('Number of variables in model = {}'.format(str(self.solver.NumVars)))
+        print('Number of constraints in model = {}'.format(str(self.solver.NumConstrs)))
 
-        # get solution
-        if self.solution == pywraplp.Solver.OPTIMAL:
+        if self.solver.status == GRB.Status.OPTIMAL:
             print('Solution is found')
-            print('Problem solved in {} milliseconds'.format(str(self.solver.WallTime())))
-            print('Problem solved in {} iterations'.format(str(self.solver.Iterations())))
-            print('Problem solved in {} iterations'.format(str(self.solver.Iterations())))
-            print('Problem objective = {} '.format(str(self.solver.Objective().Value())))
+            print('Problem solved in {} milliseconds'.format(str(self.solver.Runtime)))
+            print('Problem solved in {} iterations'.format(str(self.solver.IterCount)))
+            print('Problem objective = {} '.format(str(self.solver.ObjVal)))
+
+        elif self.solver.status == GRB.Status.TIME_LIMIT:
+            raise Exception('Time limit is reached')
 
         else:
             raise Exception('No solution exists')
 
     def compile_results(self):
+        '''
+        Get results
+        :return:
+        '''
+
+        self.x_solution = self.solver.getAttr("x", self.x)
 
         visit_orders = []
         for i, j in self.t.keys():
@@ -295,11 +335,15 @@ class Formulation:
                 visit_orders.append({'PREVIOUS_LOCATION_NAME': i,
                                      'LOCATION_NAME': j,
                                      'VEHICLE': k,
-                                     'VALUE': self.x[i, j, k].solution_value(),
+                                     'VALUE': self.x_solution[i, j, k],
                                      'DRIVE_MINS': self.t[i, j]})
 
         visit_orders = pd.DataFrame(visit_orders)
         self.visit_orders = visit_orders[visit_orders['VALUE'] == 1]
+
+        self.y_solution = self.solver.getAttr("x", self.y)
+        self.z_solution = self.solver.getAttr("x", self.z)
+        self.w_solution = self.solver.getAttr("x", self.w)
 
         service_start_time = []
         for idx, i in enumerate(self.V):
@@ -311,18 +355,18 @@ class Formulation:
                 else:
                     event = 'SERVICING'
 
-                service_time = self.s[i].STOP_TIME_W_HELPER * self.y[k].solution_value() + \
-                               self.s[i].STOP_TIME_WH_HELPER * (1-self.y[k].solution_value())
+                service_time = self.s[i].STOP_TIME_W_HELPER * self.y_solution[k] + \
+                               self.s[i].STOP_TIME_WH_HELPER * (1-self.y_solution[k])
 
                 service_start_time.append({'LOCATION_NAME': i,
                                            'VEHICLE': k,
                                            'EVENT': event,
-                                           'HELPER': self.y[k].solution_value(),
-                                           'TEAM': self.z[k].solution_value(),
+                                           'HELPER': self.y_solution[k],
+                                           'TEAM': self.z_solution[k],
                                            'TIME_WINDOW_START_MINS': self.a[i],
-                                           'SERVICE_START_MINUTES': self.w[i, k].solution_value(),
+                                           'SERVICE_START_MINUTES': self.w_solution[i, k],
                                            'SERVICE_TIME': service_time,
-                                           'SERVICE_END_MINUTES': self.w[i, k].solution_value() + service_time,
+                                           'SERVICE_END_MINUTES': self.w_solution[i, k] + service_time,
                                            'TIME_WINDOW_END_MINUTES': self.b[i]})
         service_start_time = pd.DataFrame(service_start_time)
         self.service_start_time = service_start_time.sort_values(['VEHICLE', 'SERVICE_START_MINUTES'])
