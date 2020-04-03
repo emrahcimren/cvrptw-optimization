@@ -2,6 +2,12 @@ import pandas as pd
 import os
 current_dir, this_filename = os.path.split(__file__)
 
+# unit test data
+customers_unit_test = pd.read_pickle(os.path.join(current_dir, '../data/customers_unit_test.pkl'))
+depots_unit_test = pd.read_pickle(os.path.join(current_dir, '../data/depots_unit_test.pkl'))
+transportation_matrix_unit_test = pd.read_pickle(os.path.join(current_dir, '../data/transportation_matrix_unit_test.pkl'))
+vehicles_unit_test = pd.read_pickle(os.path.join(current_dir, '../data/vehicles_unit_test.pkl'))
+
 # smaller test set #
 customers0 = pd.read_pickle(os.path.join(current_dir, '../data/customers0.pkl'))
 depots0 = pd.read_pickle(os.path.join(current_dir, '../data/depots0.pkl'))

@@ -39,10 +39,8 @@ setup(
     ],
     packages=["cvrptw_optimization", "cvrptw_optimization/src"],
     include_package_data=True,
-    install_requires=["setuptools", "Pathlib", "idna==2.8", "pkginfo==1.5.0.1",
-                      "importlib-metadata==1.4.0", "numpy", "ortools==7.4.7247",
-                      "tqdm", "bleach", "pandas", "readme-renderer", "keyring",
-                      "requests", "twine", "mkl"] + reqs,
+    install_requires=["setuptools", "Pathlib", "numpy", "pulp",
+                      "pandas"] + reqs,
     #entry_points={
     #    "console_scripts": [
     #        "realpython=reader.__main__:main",
