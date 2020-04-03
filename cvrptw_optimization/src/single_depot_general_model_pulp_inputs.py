@@ -33,6 +33,7 @@ class ModelInputs:
         self.assignment_variables_dict = None
 
         self.update_depot_names()
+        self.create_vertices()
         self.create_customers()
         self.create_depots()
         self.create_transit()
@@ -70,7 +71,7 @@ class ModelInputs:
     def create_vertices(self):
         self.vertices = self.depots[['LOCATION_NAME', 'TIME_WINDOW_START', 'TIME_WINDOW_END']].append(
             self.customers[['LOCATION_NAME', 'TIME_WINDOW_START', 'TIME_WINDOW_END']])
-        self.vertices_dict = self._create_parameter_dict(self.transportation_matrix,
+        self.vertices_dict = self._create_parameter_dict(self.vertices,
                                                          ['LOCATION_NAME'],
                                                          ['TIME_WINDOW_START', 'TIME_WINDOW_END'])
 
