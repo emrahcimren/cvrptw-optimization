@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../cvrptw_optimization')))
 from cvrptw_optimization import desrochers_et_all_1988 as d
-from cvrptw_optimization.src import data as test_data
+from cvrptw_optimization.src import data0 as test_data
 from cvrptw_optimization.src import desrochers_et_all_1988_helpers as he
 from cvrptw_optimization.src import desrochers_et_all_1988_inputs as ip
 
