@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cvrptw_
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cvrptw_optimization/src')))
 from cvrptw_optimization.src import data as dat
 
-depots = dat.depots1
-customers = dat.customers1
-transportation_matrix = dat.transportation_matrix1
-vehicles = dat.vehicles1
+depots = dat.depots0
+customers = dat.customers0
+transportation_matrix = dat.transportation_matrix0
+vehicles = dat.vehicles0.head(3)

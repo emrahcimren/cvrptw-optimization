@@ -1,4 +1,3 @@
-import pulp
 from cvrptw_optimization.src import single_depot_general_model_pulp_inputs as inputs
 
 

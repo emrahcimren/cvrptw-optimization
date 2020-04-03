@@ -21,9 +21,11 @@ class ModelInputs:
         self.vehicles = vehicles
 
         # calculated
+        self.transportation_matrix_starting_customers = None
         self.customers_dict = None
         self.depots_dict = None
         self.transit_dict = None
+        self.transit_starting_customers_dict = None
         self.vehicles_dict = None
 
         self.vertices = None
@@ -55,11 +57,16 @@ class ModelInputs:
 
     def update_depot_names(self):
         filter_from_locs = self.transportation_matrix['FROM_LOCATION_NAME'].isin(self.depot_names)
+        self.transportation_matrix_starting_customers = self.transportation_matrix[~filter_from_locs]
         self.transportation_matrix.loc[filter_from_locs, 'FROM_LOCATION_NAME'] = self.transportation_matrix.loc[
                                                                                      filter_from_locs, 'FROM_LOCATION_NAME'] + '_LEAVE'
 
         filter_to_locs = self.transportation_matrix['TO_LOCATION_NAME'].isin(self.depot_names)
         self.transportation_matrix.loc[filter_to_locs, 'TO_LOCATION_NAME'] = self.transportation_matrix.loc[
+                                                                                 filter_to_locs, 'TO_LOCATION_NAME'] + '_ENTER'
+
+        filter_to_locs = self.transportation_matrix_starting_customers['TO_LOCATION_NAME'].isin(self.depot_names)
+        self.transportation_matrix_starting_customers.loc[filter_to_locs, 'TO_LOCATION_NAME'] = self.transportation_matrix_starting_customers.loc[
                                                                                  filter_to_locs, 'TO_LOCATION_NAME'] + '_ENTER'
 
         depots_leave = self.depots.copy()
@@ -92,6 +99,11 @@ class ModelInputs:
         self.transit_dict = self._create_parameter_dict(self.transportation_matrix,
                                                         ['FROM_LOCATION_NAME', 'TO_LOCATION_NAME'],
                                                         ['DRIVE_MINUTES', 'TRANSPORTATION_COST'])
+
+        self.transit_starting_customers_dict = self._create_parameter_dict(
+            self.transportation_matrix_starting_customers,
+            ['FROM_LOCATION_NAME', 'TO_LOCATION_NAME'],
+            ['DRIVE_MINUTES', 'TRANSPORTATION_COST'])
 
     def create_assignment_variables(self):
         self.assignment_variables_dict = {}
