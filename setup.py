@@ -37,13 +37,8 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.6",
     ],
-    packages=["cvrptw_optimization", "cvrptw_optimization/src"],
+    packages=["cvrptw_optimization", "cvrptw_optimization/data", "cvrptw_optimization/src"],
     include_package_data=True,
     install_requires=["setuptools", "Pathlib", "numpy", "pulp",
                       "pandas"] + reqs,
-    #entry_points={
-    #    "console_scripts": [
-    #        "realpython=reader.__main__:main",
-    #    ]
-    #},
 )

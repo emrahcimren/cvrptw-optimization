@@ -6,6 +6,14 @@ def run_single_depot_general_model(depots,
                                    customers,
                                    transportation_matrix,
                                    vehicles):
+    '''
+    Run single depot general model
+    :param depots:
+    :param customers:
+    :param transportation_matrix:
+    :param vehicles:
+    :return:
+    '''
 
     print('Running Single Depot General Model')
 

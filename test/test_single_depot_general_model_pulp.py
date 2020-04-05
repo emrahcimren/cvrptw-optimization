@@ -8,7 +8,8 @@ import unittest
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cvrptw_optimization')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cvrptw_optimization/src')))
-from cvrptw_optimization.src import data as dat
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'cvrptw_optimization/data')))
+from cvrptw_optimization.data import data as dat
 
 depots = dat.depots_unit_test
 customers = dat.customers_unit_test
