@@ -52,4 +52,4 @@ def run_single_depot_general_model(depots,
     print('Getting model results')
     model.get_model_solution()
 
-    return model.solution_path
+    return model.solution_objective, model.solution_path

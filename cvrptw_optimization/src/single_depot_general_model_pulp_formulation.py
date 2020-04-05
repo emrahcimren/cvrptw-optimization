@@ -32,6 +32,7 @@ class ModelFormulation:
         self.model = None
 
         # model results
+        self.solution_objective = None
         self.solution_assignment = None
         self.solution_time = None
         self.solution_path = None
@@ -162,6 +163,9 @@ class ModelFormulation:
         if self.model.status == 1:
 
             print('problem is feasible')
+            print("The optimised objective function= ", value(self.model.objective))
+
+            self.solution_objective = value(self.model.objective)
 
             # get assignment variable values
             print('getting solution for assignment variables')
