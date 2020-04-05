@@ -38,7 +38,11 @@ class ModelFormulation:
 
     def formulate_problem(self,
                           bigm=100000000):
-
+        '''
+        Formulate problem
+        :param bigm:
+        :return:
+        '''
         self.time_var = pulp.LpVariable.dicts("Time", self.time_variables_dict.keys(), 0, None, pulp.LpContinuous)
         self.assignment_var = pulp.LpVariable.dicts("Assign", self.assignment_variables_dict.keys(), 0, 1,
                                                     pulp.LpBinary)  # Binary
@@ -133,6 +137,14 @@ class ModelFormulation:
                     solver_time_limit_minutes=10,
                     enable_solution_messaging=1,
                     solver_type='PULP_CBC_CMD'):
+        '''
+        Solve model
+        :param mip_gap:
+        :param solver_time_limit_minutes:
+        :param enable_solution_messaging:
+        :param solver_type:
+        :return:
+        '''
 
         print('solving model')
         if solver_type == 'PULP_CBC_CMD':
@@ -143,7 +155,10 @@ class ModelFormulation:
             )
 
     def get_model_solution(self):
-
+        '''
+        Get model results
+        :return:
+        '''
         if self.model.status == 1:
 
             print('problem is feasible')

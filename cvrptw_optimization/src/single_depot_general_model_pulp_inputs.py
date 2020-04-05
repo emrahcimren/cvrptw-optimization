@@ -56,6 +56,10 @@ class ModelInputs:
         return parameter_df[value].to_dict()
 
     def update_depot_names(self):
+        '''
+        Updated depot names
+        :return:
+        '''
         filter_from_locs = self.transportation_matrix['FROM_LOCATION_NAME'].isin(self.depot_names)
         self.transportation_matrix_starting_customers = self.transportation_matrix[~filter_from_locs]
         self.transportation_matrix.loc[filter_from_locs, 'FROM_LOCATION_NAME'] = self.transportation_matrix.loc[
@@ -76,6 +80,10 @@ class ModelInputs:
         self.depots = depots_leave.append(depots_enter)
 
     def create_vertices(self):
+        '''
+        Create vertices
+        :return:
+        '''
         self.vertices = self.depots[['LOCATION_NAME', 'TIME_WINDOW_START', 'TIME_WINDOW_END']].append(
             self.customers[['LOCATION_NAME', 'TIME_WINDOW_START', 'TIME_WINDOW_END']])
         self.vertices_dict = self._create_parameter_dict(self.vertices,
@@ -83,19 +91,35 @@ class ModelInputs:
                                                          ['TIME_WINDOW_START', 'TIME_WINDOW_END'])
 
     def create_customers(self):
+        '''
+        Create customers
+        :return:
+        '''
         self.customers_dict = self._create_parameter_dict(self.customers, ['LOCATION_NAME'],
                                                           ['DEMAND', 'STOP_TIME', 'TIME_WINDOW_START',
                                                            'TIME_WINDOW_END'])
 
     def create_depots(self):
+        '''
+        Create depots
+        :return:
+        '''
         self.depots_dict = self._create_parameter_dict(self.depots, ['LOCATION_NAME'],
                                                        ['MAXIMUM_CAPACITY', 'TIME_WINDOW_START', 'TIME_WINDOW_END'])
 
     def create_vehicles(self):
+        '''
+        Create vehicles
+        :return:
+        '''
         self.vehicles_dict = self._create_parameter_dict(self.vehicles, ['VEHICLE_NAME'],
                                                          ['CAPACITY', 'VEHICLE_FIXED_COST'])
 
     def create_transit(self):
+        '''
+        Create transit dictionary
+        :return:
+        '''
         self.transit_dict = self._create_parameter_dict(self.transportation_matrix,
                                                         ['FROM_LOCATION_NAME', 'TO_LOCATION_NAME'],
                                                         ['DRIVE_MINUTES', 'TRANSPORTATION_COST'])
@@ -106,11 +130,19 @@ class ModelInputs:
             ['DRIVE_MINUTES', 'TRANSPORTATION_COST'])
 
     def create_assignment_variables(self):
+        '''
+        Create assignment variables set
+        :return:
+        '''
         self.assignment_variables_dict = {}
         for tup in product(self.transit_dict['DRIVE_MINUTES'].keys(), self.vehicles_dict['CAPACITY'].keys()):
             self.assignment_variables_dict[tup[0][0], tup[0][1], tup[1]] = 0
 
     def create_time_variables(self):
+        '''
+        Create time variables set
+        :return:
+        '''
         self.time_variables_dict = {}
         for tup in product(self.vertices['LOCATION_NAME'], self.vehicles_dict['CAPACITY'].keys()):
             self.time_variables_dict[tup[0], tup[1]] = 0
