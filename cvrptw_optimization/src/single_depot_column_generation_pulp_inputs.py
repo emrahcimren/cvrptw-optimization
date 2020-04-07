@@ -27,6 +27,9 @@ class ModelInputs:
         self.transit_dict = None
         self.transit_starting_customers_dict = None
         self.vehicles_dict = None
+        self.paths = None
+        self.paths_list = None
+        self.paths_dict = None
 
         self.vertices = None
         self.vertices_dict = None
@@ -135,8 +138,9 @@ class ModelInputs:
         :return:
         '''
         self.assignment_variables_dict = {}
-        for tup in product(self.transit_dict['DRIVE_MINUTES'].keys(), self.vehicles_dict['CAPACITY'].keys()):
-            self.assignment_variables_dict[tup[0][0], tup[0][1], tup[1]] = 0
+        #for tup in product(self.transit_dict['DRIVE_MINUTES'].keys(), self.vehicles_dict['CAPACITY'].keys()):
+        for tup in self.transit_dict['DRIVE_MINUTES'].keys():
+            self.assignment_variables_dict[tup[0], tup[1]] = 0
 
     def create_time_variables(self):
         '''
@@ -144,9 +148,54 @@ class ModelInputs:
         :return:
         '''
         self.time_variables_dict = {}
-        for tup in product(self.vertices['LOCATION_NAME'], self.vehicles_dict['CAPACITY'].keys()):
-            self.time_variables_dict[tup[0], tup[1]] = 0
+        #for tup in product(self.vertices['LOCATION_NAME'], self.vehicles_dict['CAPACITY'].keys()):
+        for tup in self.vertices['LOCATION_NAME']:
+            self.time_variables_dict[tup] = 0
 
     def create_initial_paths(self):
+        '''
+        Function to create initial paths
+        :return:
+        '''
 
-        print('test')
+        self.paths = self.customers.copy()
+        self.paths['PATH_NAME'] = range(len(self.paths))
+        self.paths['PATH_NAME'] = 'PATH ' + self.paths['PATH_NAME'].astype(str)
+        self.paths_list = list(zip(self.paths['PATH_NAME'], self.paths['LOCATION_NAME']))
+        self.paths_dict = {}
+        for path in self.paths_list:
+            self.paths_dict[path[0]] = [self.depot_names[0] + '_LEAVE', path[1], self.depot_names[0] + '_ENTER']
+
+    def calculate_path_costs(self, paths_dict, transit_dict):
+        '''
+        Calcuate path costs
+        :param paths_dict:
+        :param transit_dict:
+        :return:
+        '''
+        paths_cost_dict = {}
+        for path in paths_dict.keys():
+            trans_cost = 0
+            for path_idx in range(0, len(paths_dict[path])-1):
+                trans_cost = trans_cost + transit_dict['TRANSPORTATION_COST'][paths_dict[path][path_idx], paths_dict[path][path_idx+1]]
+            paths_cost_dict[path] = trans_cost
+
+        return paths_cost_dict
+
+    def calculate_path_customer_allocation(self, paths_dict, customers_list):
+        '''
+        Calculate customer allocation
+        :param paths_dict:
+        :param customers_list:
+        :return:
+        '''
+
+        paths_customers_dict = {}
+        for path in paths_dict.keys():
+            for customer in customers_list:
+                if customer in paths_dict[path]:
+                    paths_customers_dict[path, customer] = 1
+                else:
+                    paths_customers_dict[path, customer] = 0
+
+        return paths_customers_dict

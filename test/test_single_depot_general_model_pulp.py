@@ -49,6 +49,9 @@ class SingleDepotTest(unittest.TestCase):
         print('Getting model results')
         model.get_model_solution()
 
+        print(model.solution_path['LOCATION_NAME'])
+        print(model.solution_objective)
+
         self.assertTrue(len(model.solution_path) > 0)
 
 
