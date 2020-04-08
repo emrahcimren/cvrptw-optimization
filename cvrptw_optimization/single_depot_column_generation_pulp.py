@@ -81,13 +81,16 @@ def run_single_depot_column_generation(depots,
         paths_cost_dict = model_inputs.calculate_path_costs(paths_dict, model_inputs.transit_dict)
         paths_customers_dict = model_inputs.calculate_path_customer_allocation(paths_dict, list(
             model_inputs.customers_dict['DEMAND'].keys()))
+
+        model_name = str(iteration) + 'MASP'
         price, solution_master_model_objective, solution_master_path = model_formulation.formulate_and_solve_master_problem(
             paths_dict,
             paths_cost_dict,
             paths_customers_dict,
+            lp_file_name=model_name,
             mip_gap=0.001,
             solver_time_limit_minutes=10,
-            enable_solution_messaging=0,
+            enable_solution_messaging=1,
             solver_type='PULP_CBC_CMD'
         )
 
@@ -96,9 +99,11 @@ def run_single_depot_column_generation(depots,
         # solve sub-problem
         print('Solving sub-problem')
         path_name = 'PATH ' + str(len(paths_dict))
+        model_name = str(iteration)+'SUBP'
         solution_objective, solution_path, sub_model = model_formulation.formulate_and_solve_subproblem(price,
                                                                                                         capacity,
                                                                                                         path_name,
+                                                                                                        lp_file_name=model_name,
                                                                                                         bigm=1000000,
                                                                                                         mip_gap=0.0001,
                                                                                                         solver_time_limit_minutes=10,
@@ -120,6 +125,8 @@ def run_single_depot_column_generation(depots,
     solution_subproblem = pd.concat(solution_subproblem)
     solution_subproblem.rename(columns={'OBJECTIVE': 'OBJECTIVE_SUBPROBLEM'}, inplace=True)
     solution_master_path.rename(columns={'OBJECTIVE': 'OBJECTIVE_MASTERPROBLEM'}, inplace=True)
+
+    # Setup all variables to integers and solve the master problem
 
     final_solution = solution_master_path.merge(solution_subproblem, how='left', on=['PATH_NAME'])
 

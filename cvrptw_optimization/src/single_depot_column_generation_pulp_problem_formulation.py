@@ -29,16 +29,19 @@ class ColumnGenerationFormulation:
                                            paths_dict,
                                            paths_cost_dict,
                                            paths_customers_dict,
+                                           lp_file_name=None,
                                            mip_gap=0.001,
                                            solver_time_limit_minutes=10,
                                            enable_solution_messaging=1,
                                            solver_type='PULP_CBC_CMD'
                                            ):
+
         '''
         Formulate and solve master problem
         :param paths_dict:
         :param paths_cost_dict:
         :param paths_customers_dict:
+        :param lp_file_name:
         :param mip_gap:
         :param solver_time_limit_minutes:
         :param enable_solution_messaging:
@@ -57,6 +60,9 @@ class ColumnGenerationFormulation:
                 [paths_customers_dict[path, customer] * path_var[path] for path in
                  paths_dict.keys()]) == 1, "Customer" + str(customer)
 
+        if lp_file_name is not None:
+            master_model.writeLP('{}.lp'.format(str(lp_file_name)))
+
         if solver_type == 'PULP_CBC_CMD':
             master_model.solve(PULP_CBC_CMD(
                 msg=enable_solution_messaging,
@@ -73,6 +79,9 @@ class ColumnGenerationFormulation:
             for customer in self.customers_dict['DEMAND'].keys():
                 price[customer] = float(master_model.constraints["Customer" + str(customer).replace(" ", "_")].pi)
             print("Dual values: ", price)
+
+            for name, c in list(master_model.constraints.items()):
+                print(name, ":", c, "\t", c.pi, "\t\t", c.slack)
 
             solution_master_path = []
             for path in path_var.keys():
