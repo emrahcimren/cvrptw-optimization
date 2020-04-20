@@ -37,12 +37,6 @@ def initiate_single_depot_column_generation(depots,
 
     return model_inputs, model_formulation
 
-'''
-master_path=final_solution_master_path
-transit_dict=model_inputs.transit_dict
-customers_dict=model_inputs.customers_dict
-vertices_dict=model_inputs.vertices_dict
-'''
 
 def process_paths(master_path, transit_dict, customers_dict, vertices_dict):
     '''
@@ -71,8 +65,10 @@ def process_paths(master_path, transit_dict, customers_dict, vertices_dict):
     for idx, row in solution.iterrows():
         print(idx, row)
         if (row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME) in transit_dict['TRANSPORTATION_COST'].keys():
-            solution['DRIVE_MINUTES'][idx] = transit_dict['DRIVE_MINUTES'][row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
-            solution['TRANSPORTATION_COST'][idx] = transit_dict['TRANSPORTATION_COST'][row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
+            solution['DRIVE_MINUTES'][idx] = transit_dict['DRIVE_MINUTES'][
+                row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
+            solution['TRANSPORTATION_COST'][idx] = transit_dict['TRANSPORTATION_COST'][
+                row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
 
         if row.LOCATION_NAME in customers_dict['STOP_TIME'].keys():
             solution['STOP_TIME'][idx] = customers_dict['STOP_TIME'][row.LOCATION_NAME]
@@ -97,7 +93,6 @@ def run_single_depot_column_generation(depots,
                                        enable_solution_messaging=0,
                                        solver_type='PULP_CBC_CMD',
                                        max_iteration=50):
-
     '''
     Function to run the column generation algorithm
     :param depots:
@@ -121,7 +116,6 @@ def run_single_depot_column_generation(depots,
     paths_dict = model_inputs.paths_dict.copy()
 
     iteration = 0
-    solution_subproblem = []
     while True:
 
         print("Column Generation Iteration: ", iteration)
@@ -139,10 +133,10 @@ def run_single_depot_column_generation(depots,
             paths_customers_dict,
             binary_model=False,
             lp_file_name=None,
-            mip_gap=0.001,
-            solver_time_limit_minutes=10,
-            enable_solution_messaging=1,
-            solver_type='PULP_CBC_CMD'
+            mip_gap=mip_gap,
+            solver_time_limit_minutes=solver_time_limit_minutes,
+            enable_solution_messaging=enable_solution_messaging,
+            solver_type=solver_type
         )
 
         print("Dual values: ", price)
@@ -150,16 +144,16 @@ def run_single_depot_column_generation(depots,
         # solve sub-problem
         print('Solving sub-problem')
         path_name = 'PATH ' + str(len(paths_dict))
-        model_name = str(iteration)+'SUBP'
+        model_name = str(iteration) + 'SUBP'
         solution_objective, solution_path, sub_model = model_formulation.formulate_and_solve_subproblem(price,
                                                                                                         capacity,
                                                                                                         path_name,
                                                                                                         lp_file_name=None,
                                                                                                         bigm=1000000,
-                                                                                                        mip_gap=0.0001,
-                                                                                                        solver_time_limit_minutes=10,
-                                                                                                        enable_solution_messaging=0,
-                                                                                                        solver_type='PULP_CBC_CMD'
+                                                                                                        mip_gap=mip_gap,
+                                                                                                        solver_time_limit_minutes=solver_time_limit_minutes,
+                                                                                                        enable_solution_messaging=enable_solution_messaging,
+                                                                                                        solver_type=solver_type
                                                                                                         )
         solution_subproblem.append(solution_path)
         print("Master LP problem objective value: ", solution_master_model_objective)
@@ -173,8 +167,6 @@ def run_single_depot_column_generation(depots,
 
         iteration += 1
 
-    solution_subproblem = pd.concat(solution_subproblem)
-
     # Setup all variables to integers and solve the master problem
     final_price, final_solution_master_model_objective, final_solution_master_path = model_formulation.formulate_and_solve_master_problem(
         paths_dict,
@@ -182,16 +174,15 @@ def run_single_depot_column_generation(depots,
         paths_customers_dict,
         binary_model=True,
         lp_file_name=None,
-        mip_gap=0.0001,
-        solver_time_limit_minutes=10,
-        enable_solution_messaging=1,
-        solver_type='PULP_CBC_CMD'
+        mip_gap=mip_gap,
+        solver_time_limit_minutes=solver_time_limit_minutes,
+        enable_solution_messaging=enable_solution_messaging,
+        solver_type=solver_type
     )
 
-    solution_subproblem.rename(columns={'OBJECTIVE': 'OBJECTIVE_SUBPROBLEM'}, inplace=True)
-    final_solution_master_path.rename(columns={'OBJECTIVE': 'OBJECTIVE_MASTERPROBLEM'}, inplace=True)
-
-    solution = process_paths(final_solution_master_path, model_inputs.transit_dict, model_inputs.customers_dict,
+    solution = process_paths(final_solution_master_path,
+                             model_inputs.transit_dict,
+                             model_inputs.customers_dict,
                              model_inputs.vertices_dict)
 
     return solution
