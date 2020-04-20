@@ -168,6 +168,7 @@ def run_single_depot_column_generation(depots,
         iteration += 1
 
     # Setup all variables to integers and solve the master problem
+    print("Setup all variables to integers and solve the master problem")
     final_price, final_solution_master_model_objective, final_solution_master_path = model_formulation.formulate_and_solve_master_problem(
         paths_dict,
         paths_cost_dict,
@@ -180,6 +181,9 @@ def run_single_depot_column_generation(depots,
         solver_type=solver_type
     )
 
+    print("Master Binary problem objective value: ", final_solution_master_model_objective)
+
+    print("Compiling solution")
     solution = process_paths(final_solution_master_path,
                              model_inputs.transit_dict,
                              model_inputs.customers_dict,
