@@ -155,7 +155,7 @@ def run_single_depot_column_generation(depots,
                                                                                                         enable_solution_messaging=enable_solution_messaging,
                                                                                                         solver_type=solver_type
                                                                                                         )
-        solution_subproblem.append(solution_path)
+
         print("Master LP problem objective value: ", solution_master_model_objective)
         print("Sub-problem Objective value: ", solution_objective)
 
