@@ -29,6 +29,8 @@ class ColumnGenerationFormulation:
                                            paths_dict,
                                            paths_cost_dict,
                                            paths_customers_dict,
+                                           number_of_paths=None,
+                                           binary_model=False,
                                            lp_file_name=None,
                                            mip_gap=0.001,
                                            solver_time_limit_minutes=10,
@@ -41,6 +43,7 @@ class ColumnGenerationFormulation:
         :param paths_dict:
         :param paths_cost_dict:
         :param paths_customers_dict:
+        :param binary_model:
         :param lp_file_name:
         :param mip_gap:
         :param solver_time_limit_minutes:
@@ -50,7 +53,10 @@ class ColumnGenerationFormulation:
         '''
 
         master_model = pulp.LpProblem("MA_CVRPTW", pulp.LpMinimize)
-        path_var = pulp.LpVariable.dicts("Path", paths_dict.keys(), 0, 1, pulp.LpContinuous)
+        if binary_model:
+            path_var = pulp.LpVariable.dicts("Path", paths_dict.keys(), 0, 1, pulp.LpBinary)
+        else:
+            path_var = pulp.LpVariable.dicts("Path", paths_dict.keys(), 0, 1, pulp.LpContinuous)
         print('Master model objective function')
         master_model += pulp.lpSum(paths_cost_dict[path] * path_var[path] for path in paths_dict.keys())
 
@@ -59,6 +65,11 @@ class ColumnGenerationFormulation:
             master_model += pulp.lpSum(
                 [paths_customers_dict[path, customer] * path_var[path] for path in
                  paths_dict.keys()]) == 1, "Customer" + str(customer)
+
+        if number_of_paths is not None:
+            master_model += pulp.lpSum(
+                [path_var[path] for path in
+                 paths_dict.keys()]) == number_of_paths, "No of Vehicles"
 
         if lp_file_name is not None:
             master_model.writeLP('{}.lp'.format(str(lp_file_name)))
@@ -78,10 +89,10 @@ class ColumnGenerationFormulation:
             price = {}
             for customer in self.customers_dict['DEMAND'].keys():
                 price[customer] = float(master_model.constraints["Customer" + str(customer).replace(" ", "_")].pi)
-            print("Dual values: ", price)
+            #print("Dual values: ", price)
 
-            for name, c in list(master_model.constraints.items()):
-                print(name, ":", c, "\t", c.pi, "\t\t", c.slack)
+            #for name, c in list(master_model.constraints.items()):
+            #    print(name, ":", c, "\t", c.pi, "\t\t", c.slack)
 
             solution_master_path = []
             for path in path_var.keys():
@@ -128,26 +139,27 @@ class ColumnGenerationFormulation:
         time_var = pulp.LpVariable.dicts("Time", self.time_variables_dict.keys(), 0, None, pulp.LpContinuous)
         assignment_var = pulp.LpVariable.dicts("Assign", self.assignment_variables_dict.keys(), 0, 1, pulp.LpBinary)
 
-        print('objective function')
+        #print('objective function')
         objective_keys = []
         for from_loc, to_loc in self.assignment_variables_dict.keys():
             if from_loc != self.depot_leave:
                 objective_keys.append([from_loc, to_loc])
 
         sub_model += pulp.lpSum(
-            self.transit_dict['TRANSPORTATION_COST'][from_loc, to_loc] * assignment_var[from_loc, to_loc] -
-            price[from_loc] * assignment_var[from_loc, to_loc]
-            for from_loc, to_loc in objective_keys
-        )
+            self.transit_dict['TRANSPORTATION_COST'][from_loc, to_loc] * assignment_var[from_loc, to_loc]
+            for from_loc, to_loc in self.assignment_variables_dict.keys())\
+            - pulp.lpSum(
+                price[from_loc] * assignment_var[from_loc, to_loc]
+            for from_loc, to_loc in objective_keys)
 
         # Each vehicle should leave from a depot
-        print('Each vehicle should leave from a depot')
+        #print('Each vehicle should leave from a depot')
         sub_model += pulp.lpSum([assignment_var[self.depot_leave, customer]
                                  for customer in
                                  self.customers_dict['DEMAND'].keys()]) == 1, "entryDepotConnection"
 
         # Flow in Flow Out
-        print('Flow in Flow out')
+        #print('Flow in Flow out')
         for customer in self.customers_dict['DEMAND'].keys():
             incoming_arcs = []
             outgoing_arcs = []
@@ -164,20 +176,20 @@ class ColumnGenerationFormulation:
                 customer)
 
         # Each vehicle should enter a depot
-        print('Each vehicle should enter a depot')
+        #print('Each vehicle should enter a depot')
         sub_model += pulp.lpSum([assignment_var[customer, self.depot_enter]
                                  for customer in
                                  self.customers_dict['DEMAND'].keys()]) == 1, "exitDepotConnection"
 
         # vehicle Capacity
-        print('vehicle Capacity')
+        #print('vehicle Capacity')
         sub_model += pulp.lpSum(
             [float(self.customers_dict['DEMAND'][from_loc]) * assignment_var[from_loc, to_loc]
              for from_loc, to_loc in
              self.transit_starting_customers_dict['DRIVE_MINUTES'].keys()]) <= float(capacity), "Capacity"
 
         # Time intervals
-        print('time intervals')
+        #print('time intervals')
         for from_loc, to_loc in self.assignment_variables_dict.keys():
             stop_time = 0
             if from_loc != self.depot_leave:
@@ -189,7 +201,7 @@ class ColumnGenerationFormulation:
                 from_loc) + 'p' + str(to_loc)
 
         # Time Windows
-        print('time windows')
+        #print('time windows')
         for vertex in self.time_variables_dict.keys():
             time_var[vertex].bounds(float(self.vertices_dict['TIME_WINDOW_START'][vertex]),
                                     float(self.vertices_dict['TIME_WINDOW_END'][vertex]))
@@ -206,13 +218,13 @@ class ColumnGenerationFormulation:
 
         if pulp.LpStatus[sub_model.status] in ('Optimal', 'Undefined'):
 
-            print('Model Status = {}'.format(pulp.LpStatus[sub_model.status]))
-            print("The optimised objective function= ", value(sub_model.objective))
+            print('Sub Model Status = {}'.format(pulp.LpStatus[sub_model.status]))
+            print("Sub model optimized objective function= ", value(sub_model.objective))
 
             solution_objective = value(sub_model.objective)
 
             # get assignment variable values
-            print('getting solution for assignment variables')
+            #print('getting solution for assignment variables')
             solution_assignment = []
             for from_loc, to_loc in self.assignment_variables_dict.keys():
                 if assignment_var[from_loc, to_loc].value() > 0:
@@ -227,7 +239,7 @@ class ColumnGenerationFormulation:
             solution_assignment = pd.DataFrame(solution_assignment)
 
             # get time variable values
-            print('getting solution for time variables')
+            #print('getting solution for time variables')
             solution_time = []
             for loc in time_var.keys():
                 if time_var[loc].value() > 0:

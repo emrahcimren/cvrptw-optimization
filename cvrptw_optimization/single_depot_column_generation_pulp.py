@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from cvrptw_optimization.src import single_depot_column_generation_pulp_inputs as inputs
 from cvrptw_optimization.src import single_depot_column_generation_pulp_problem_formulation as formulation
@@ -35,6 +36,55 @@ def initiate_single_depot_column_generation(depots,
                                                                 depot_name)
 
     return model_inputs, model_formulation
+
+'''
+master_path=final_solution_master_path
+transit_dict=model_inputs.transit_dict
+customers_dict=model_inputs.customers_dict
+vertices_dict=model_inputs.vertices_dict
+'''
+
+def process_paths(master_path, transit_dict, customers_dict, vertices_dict):
+    '''
+    Function to process final master problem results
+    :param master_path:
+    :param transit_dict:
+    :param customers_dict:
+    :param vertices_dict:
+    :return:
+    '''
+
+    solution = master_path.explode('PATH').reset_index(drop=True)
+    solution['STOP_NUMBER'] = solution.groupby(['PATH_NAME']).cumcount() + 1
+    solution['LOCATION_NAME'] = solution['PATH']
+    solution['PREVIOUS_LOCATION_NAME'] = solution.groupby(['PATH_NAME'])['LOCATION_NAME'].shift(1)
+    solution['ORIGINAL_LOCATION_NAME'] = solution['LOCATION_NAME']
+    solution['ORIGINAL_LOCATION_NAME'] = solution['ORIGINAL_LOCATION_NAME'].str.replace('_ENTER', '')
+    solution['ORIGINAL_LOCATION_NAME'] = solution['ORIGINAL_LOCATION_NAME'].str.replace('_LEAVE', '')
+    solution['DRIVE_MINUTES'] = np.nan
+    solution['TRANSPORTATION_COST'] = np.nan
+    solution['TIME_WINDOW_START'] = np.nan
+    solution['STOP_TIME'] = 0
+    solution['TIME_WINDOW_END'] = np.nan
+    solution['DEMAND'] = 0
+
+    for idx, row in solution.iterrows():
+        print(idx, row)
+        if (row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME) in transit_dict['TRANSPORTATION_COST'].keys():
+            solution['DRIVE_MINUTES'][idx] = transit_dict['DRIVE_MINUTES'][row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
+            solution['TRANSPORTATION_COST'][idx] = transit_dict['TRANSPORTATION_COST'][row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
+
+        if row.LOCATION_NAME in customers_dict['STOP_TIME'].keys():
+            solution['STOP_TIME'][idx] = customers_dict['STOP_TIME'][row.LOCATION_NAME]
+            solution['DEMAND'][idx] = customers_dict['DEMAND'][row.LOCATION_NAME]
+
+        if row.LOCATION_NAME in vertices_dict['TIME_WINDOW_START'].keys():
+            solution['TIME_WINDOW_START'][idx] = vertices_dict['TIME_WINDOW_START'][row.LOCATION_NAME]
+            solution['TIME_WINDOW_END'][idx] = vertices_dict['TIME_WINDOW_END'][row.LOCATION_NAME]
+
+        solution['START_TIME'] = solution['TIME_WINDOW_START']
+
+    return solution
 
 
 def run_single_depot_column_generation(depots,
@@ -87,7 +137,8 @@ def run_single_depot_column_generation(depots,
             paths_dict,
             paths_cost_dict,
             paths_customers_dict,
-            lp_file_name=model_name,
+            binary_model=False,
+            lp_file_name=None,
             mip_gap=0.001,
             solver_time_limit_minutes=10,
             enable_solution_messaging=1,
@@ -103,7 +154,7 @@ def run_single_depot_column_generation(depots,
         solution_objective, solution_path, sub_model = model_formulation.formulate_and_solve_subproblem(price,
                                                                                                         capacity,
                                                                                                         path_name,
-                                                                                                        lp_file_name=model_name,
+                                                                                                        lp_file_name=None,
                                                                                                         bigm=1000000,
                                                                                                         mip_gap=0.0001,
                                                                                                         solver_time_limit_minutes=10,
@@ -123,11 +174,24 @@ def run_single_depot_column_generation(depots,
         iteration += 1
 
     solution_subproblem = pd.concat(solution_subproblem)
-    solution_subproblem.rename(columns={'OBJECTIVE': 'OBJECTIVE_SUBPROBLEM'}, inplace=True)
-    solution_master_path.rename(columns={'OBJECTIVE': 'OBJECTIVE_MASTERPROBLEM'}, inplace=True)
 
     # Setup all variables to integers and solve the master problem
+    final_price, final_solution_master_model_objective, final_solution_master_path = model_formulation.formulate_and_solve_master_problem(
+        paths_dict,
+        paths_cost_dict,
+        paths_customers_dict,
+        binary_model=True,
+        lp_file_name=None,
+        mip_gap=0.0001,
+        solver_time_limit_minutes=10,
+        enable_solution_messaging=1,
+        solver_type='PULP_CBC_CMD'
+    )
 
-    final_solution = solution_master_path.merge(solution_subproblem, how='left', on=['PATH_NAME'])
+    solution_subproblem.rename(columns={'OBJECTIVE': 'OBJECTIVE_SUBPROBLEM'}, inplace=True)
+    final_solution_master_path.rename(columns={'OBJECTIVE': 'OBJECTIVE_MASTERPROBLEM'}, inplace=True)
 
-    return final_solution
+    solution = process_paths(final_solution_master_path, model_inputs.transit_dict, model_inputs.customers_dict,
+                             model_inputs.vertices_dict)
+
+    return solution
