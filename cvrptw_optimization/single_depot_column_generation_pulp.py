@@ -63,7 +63,6 @@ def process_paths(master_path, transit_dict, customers_dict, vertices_dict):
     solution['DEMAND'] = 0
 
     for idx, row in solution.iterrows():
-        print(idx, row)
         if (row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME) in transit_dict['TRANSPORTATION_COST'].keys():
             solution['DRIVE_MINUTES'][idx] = transit_dict['DRIVE_MINUTES'][
                 row.PREVIOUS_LOCATION_NAME, row.LOCATION_NAME]
@@ -93,6 +92,7 @@ def run_single_depot_column_generation(depots,
                                        enable_solution_messaging=0,
                                        solver_type='PULP_CBC_CMD',
                                        max_iteration=50):
+
     '''
     Function to run the column generation algorithm
     :param depots:
@@ -105,7 +105,7 @@ def run_single_depot_column_generation(depots,
     :param enable_solution_messaging:
     :param solver_type:
     :param max_iteration:
-    :return:
+    :return: solution, algorithm master problem and subproblem objectives
     '''
 
     model_inputs, model_formulation = initiate_single_depot_column_generation(depots,
@@ -116,6 +116,7 @@ def run_single_depot_column_generation(depots,
     paths_dict = model_inputs.paths_dict.copy()
 
     iteration = 0
+    solution_statistics = []
     while True:
 
         print("Column Generation Iteration: ", iteration)
@@ -158,6 +159,9 @@ def run_single_depot_column_generation(depots,
 
         print("Master LP problem objective value: ", solution_master_model_objective)
         print("Sub-problem Objective value: ", solution_objective)
+        solution_statistics.append({'ITERATION': iteration,
+                                    'MASTER_PROBLEM_OBJECTIVE': solution_master_model_objective,
+                                    'SUB_PROBLEM_OBJECTIVE': solution_objective})
 
         # check if
         if (solution_objective > -1) or iteration == max_iteration:
@@ -189,4 +193,4 @@ def run_single_depot_column_generation(depots,
                              model_inputs.customers_dict,
                              model_inputs.vertices_dict)
 
-    return solution
+    return solution, solution_statistics
