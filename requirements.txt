@@ -2,7 +2,7 @@ certifi==2019.11.28
 numpy==1.18.1
 ortools==7.5.7466
 pandas==1.0.3
-protobuf==3.11.3
+protobuf==3.15.0
 PuLP==1.6.8
 pyparsing==2.4.6
 python-dateutil==2.8.1
