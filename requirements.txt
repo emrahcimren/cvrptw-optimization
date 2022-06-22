@@ -1,5 +1,5 @@
 certifi==2019.11.28
-numpy==1.18.1
+numpy==1.22.0
 ortools==7.5.7466
 pandas==1.0.3
 protobuf==3.11.3
